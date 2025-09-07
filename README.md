@@ -46,7 +46,7 @@ A comprehensive real-time vehicle tracking system specifically designed for Iraq
    loadDemoData();
    ```
 4. **Start Testing** with the following credentials:
-   - **Admin Login**: euzardi@gmail.com / Sarchnar1
+   - **Admin Login**: 
    - **Demo Driver**: Any email from demo data / demo123
 
 ### File Structure
@@ -331,5 +331,6 @@ For technical support or questions:
 - [ ] API for third-party integrations
 
 ---
+
 
 **Built with ❤️ for Iraq's transportation needs**
