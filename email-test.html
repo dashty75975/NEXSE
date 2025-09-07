@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEXŞE Email Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .btn { background: #1e88e5; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; margin: 5px; }
+        .message { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <h1>🚗 NEXŞE Email System Test</h1>
+    
+    <div>
+        <h3>Test Email Functions</h3>
+        <button class="btn" onclick="testWelcomeEmail()">Test Welcome Email</button>
+        <button class="btn" onclick="testApprovalEmail()">Test Approval Email</button>
+        <button class="btn" onclick="testAdminNotification()">Test Admin Notification</button>
+    </div>
+    
+    <div id="test-results"></div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <script src="email-service.js"></script>
+    
+    <script>
+        let emailService = new EmailService();
+        
+        async function testWelcomeEmail() {
+            const testDriver = {
+                name: 'Ahmed Ali',
+                email: 'ahmed.ali@example.com',
+                phone: '+964 770 123 4567',
+                vehicleType: 'taxi',
+                plate: 'BGD-123',
+                licenseNumber: 'DL123456789'
+            };
+            
+            const result = await emailService.sendWelcomeEmail(testDriver);
+            showResult('Welcome email: ' + (result.success ? 'Success' : 'Failed'), result.success ? 'success' : 'error');
+        }
+        
+        async function testApprovalEmail() {
+            const testDriver = {
+                name: 'Sara Mohammed',
+                email: 'sara.mohammed@example.com',
+                vehicleType: 'minibus',
+                plate: 'BSR-456'
+            };
+            
+            const result = await emailService.sendApprovalEmail(testDriver);
+            showResult('Approval email: ' + (result.success ? 'Success' : 'Failed'), result.success ? 'success' : 'error');
+        }
+        
+        async function testAdminNotification() {
+            const testDriver = {
+                name: 'Omar Hassan',
+                email: 'omar.hassan@example.com',
+                phone: '+964 750 987 6543',
+                vehicleType: 'bus',
+                plate: 'NBL-789'
+            };
+            
+            const result = await emailService.sendAdminNotification(testDriver);
+            showResult('Admin notification: ' + (result.success ? 'Success' : 'Failed'), result.success ? 'success' : 'error');
+        }
+        
+        function showResult(message, type) {
+            const div = document.createElement('div');
+            div.className = `message ${type}`;
+            div.textContent = message;
+            document.getElementById('test-results').appendChild(div);
+        }
+    </script>
+</body>
+</html>

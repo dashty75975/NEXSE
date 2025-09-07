@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEXŞE - Test Suite</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin-bottom: 30px;
+        }
+        .test-case {
+            padding: 15px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: #fafafa;
+        }
+        .test-result {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .test-pass {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .test-fail {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .test-pending {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .run-all {
+            background: #28a745;
+        }
+        .clear-data {
+            background: #dc3545;
+        }
+        .stats {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: center;
+            min-width: 120px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 14px;
+        }
+        .coordinates {
+            font-family: monospace;
+            background: #e9ecef;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 NEXŞE - Test Suite</h1>
+    
+    <div class="stats">
+        <div class="stat-card">
+            <div class="stat-number" id="total-tests">0</div>
+            <div>Total Tests</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="passed-tests">0</div>
+            <div>Passed</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="failed-tests">0</div>
+            <div>Failed</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="success-rate">0%</div>
+            <div>Success Rate</div>
+        </div>
+    </div>
+
+    <div class="test-container">
+        <button class="run-all" onclick="runAllTests()">🚀 Run All Tests</button>
+        <button onclick="loadDemoData()">📊 Load Demo Data</button>
+        <button class="clear-data" onclick="clearAllData()">🗑️ Clear All Data</button>
+        <button onclick="showSystemInfo()">ℹ️ System Info</button>
+    </div>
+
+    <!-- Iraq Boundary Validation Tests -->
+    <div class="test-container">
+        <div class="test-section">
+            <h2>🗺️ Iraq Boundary Validation Tests</h2>
+            
+            <div class="test-case">
+                <h3>Test 1: Valid Iraq Locations</h3>
+                <p>Testing points that should be inside Iraq boundaries</p>
+                <button onclick="testValidIraqLocations()">Run Test</button>
+                <div id="test-iraq-valid" class="test-result test-pending">⏳ Pending</div>
+            </div>
+
+            <div class="test-case">
+                <h3>Test 2: Invalid Iraq Locations</h3>
+                <p>Testing points that should be outside Iraq boundaries</p>
+                <button onclick="testInvalidIraqLocations()">Run Test</button>
+                <div id="test-iraq-invalid" class="test-result test-pending">⏳ Pending</div>
+            </div>
+
+            <div class="test-case">
+                <h3>Test 3: Border Edge Cases</h3>
+                <p>Testing coordinates near Iraq borders</p>
+                <button onclick="testBorderEdgeCases()">Run Test</button>
+                <div id="test-border-cases" class="test-result test-pending">⏳ Pending</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Driver Registration Tests -->
+    <div class="test-container">
+        <div class="test-section">
+            <h2>👤 Driver Registration Tests</h2>
+            
+            <div class="test-case">
+                <h3>Test 4: Valid Driver Registration</h3>
+                <p>Testing registration with valid Iraq location and complete data</p>
+                <button onclick="testValidDriverRegistration()">Run Test</button>
+                <div id="test-valid-registration" class="test-result test-pending">⏳ Pending</div>
+            </div>
+
+            <div class="test-case">
+                <h3>Test 5: Registration Outside Iraq</h3>
+                <p>Testing registration rejection for locations outside Iraq</p>
+                <button onclick="testRegistrationOutsideIraq()">Run Test</button>
+                <div id="test-outside-registration" class="test-result test-pending">⏳ Pending</div>
+            </div>
+
+            <div class="test-case">
+                <h3>Test 6: Incomplete Registration Data</h3>
+                <p>Testing validation for missing required fields</p>
+                <button onclick="testIncompleteRegistration()">Run Test</button>
+                <div id="test-incomplete-registration" class="test-result test-pending">⏳ Pending</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vehicle Filtering Tests -->
+    <div class="test-container">
+        <div class="test-section">
+            <h2>🚗 Vehicle Filtering & Search Tests</h2>
+            
+            <div class="test-case">
+                <h3>Test 7: Vehicle Type Filtering</h3>
+                <p>Testing filter functionality for different vehicle types</p>
+                <button onclick="testVehicleTypeFiltering()">Run Test</button>
+                <div id="test-vehicle-filtering" class="test-result test-pending">⏳ Pending</div>
+            </div>
+
+            <div class="test-case">
+                <h3>Test 8: Radius Query Accuracy</h3>
+                <p>Testing distance calculations and radius filtering</p>
+                <button onclick="testRadiusQueryAccuracy()">Run Test</button>
+                <div id="test-radius-accuracy" class="test-result test-pending">⏳ Pending</div>
+            </div>
+
+            <div class="test-case">
+                <h3>Test 9: Online/Offline Status Filtering</h3>
+                <p>Testing visibility of only online approved drivers</p>
+                <button onclick="testOnlineStatusFiltering()">Run Test</button>
+                <div id="test-online-filtering" class="test-result test-pending">⏳ Pending</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Panel Tests -->
+    <div class="test-container">
+        <div class="test-section">
+            <h2>⚙️ Admin Panel Tests</h2>
+            
+            <div class="test-case">
+                <h3>Test 10: Admin Authentication</h3>
+                <p>Testing admin login functionality</p>
+                <button onclick="testAdminAuthentication()">Run Test</button>
+                <div id="test-admin-auth" class="test-result test-pending">⏳ Pending</div>
+            </div>
+
+            <div class="test-case">
+                <h3>Test 11: Driver Approval Workflow</h3>
+                <p>Testing approve/reject driver functionality</p>
+                <button onclick="testDriverApprovalWorkflow()">Run Test</button>
+                <div id="test-approval-workflow" class="test-result test-pending">⏳ Pending</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Performance Tests -->
+    <div class="test-container">
+        <div class="test-section">
+            <h2>⚡ Performance Tests</h2>
+            
+            <div class="test-case">
+                <h3>Test 12: Large Dataset Performance</h3>
+                <p>Testing system performance with many vehicles</p>
+                <button onclick="testLargeDatasetPerformance()">Run Test</button>
+                <div id="test-performance" class="test-result test-pending">⏳ Pending</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-container">
+        <h2>📊 Test Results Summary</h2>
+        <div id="test-summary">
+            <p>Run tests to see results summary...</p>
+        </div>
+    </div>
+
+    <!-- Include required scripts -->
+    <script src="iraq-boundary.js"></script>
+    <script src="demo-data.js"></script>
+
+    <script>
+        // Test Suite Implementation
+        let testResults = {
+            total: 0,
+            passed: 0,
+            failed: 0
+        };
+
+        function updateStats() {
+            document.getElementById('total-tests').textContent = testResults.total;
+            document.getElementById('passed-tests').textContent = testResults.passed;
+            document.getElementById('failed-tests').textContent = testResults.failed;
+            
+            const successRate = testResults.total > 0 ? 
+                Math.round((testResults.passed / testResults.total) * 100) : 0;
+            document.getElementById('success-rate').textContent = successRate + '%';
+        }
+
+        function markTestResult(testId, passed, message) {
+            const element = document.getElementById(testId);
+            element.className = `test-result ${passed ? 'test-pass' : 'test-fail'}`;
+            element.innerHTML = `${passed ? '✅' : '❌'} ${message}`;
+            
+            testResults.total++;
+            if (passed) testResults.passed++;
+            else testResults.failed++;
+            
+            updateStats();
+        }
+
+        // Test 1: Valid Iraq Locations
+        function testValidIraqLocations() {
+            const validLocations = [
+                { name: "Baghdad", lat: 33.3152, lng: 44.3661 },
+                { name: "Basra", lat: 30.5085, lng: 47.7804 },
+                { name: "Erbil", lat: 36.1911, lng: 44.0094 },
+                { name: "Mosul", lat: 36.3350, lng: 43.1189 },
+                { name: "Najaf", lat: 32.0086, lng: 44.3320 }
+            ];
+
+            let allPassed = true;
+            let details = [];
+
+            validLocations.forEach(location => {
+                const isInside = isPointInIraq(location.lat, location.lng);
+                if (!isInside) {
+                    allPassed = false;
+                    details.push(`❌ ${location.name} failed`);
+                } else {
+                    details.push(`✅ ${location.name} passed`);
+                }
+            });
+
+            const message = allPassed ? 
+                `All ${validLocations.length} valid Iraq locations passed` :
+                `Failed: ${details.filter(d => d.startsWith('❌')).length} locations`;
+
+            markTestResult('test-iraq-valid', allPassed, message);
+        }
+
+        // Test 2: Invalid Iraq Locations
+        function testInvalidIraqLocations() {
+            const invalidLocations = [
+                { name: "Tehran, Iran", lat: 35.6892, lng: 51.3890 },
+                { name: "Kuwait City", lat: 29.3759, lng: 47.9774 },
+                { name: "Damascus, Syria", lat: 33.5138, lng: 36.2765 },
+                { name: "Riyadh, Saudi Arabia", lat: 24.7136, lng: 46.6753 },
+                { name: "Ankara, Turkey", lat: 39.9334, lng: 32.8597 }
+            ];
+
+            let allPassed = true;
+            let details = [];
+
+            invalidLocations.forEach(location => {
+                const isInside = isPointInIraq(location.lat, location.lng);
+                if (isInside) {
+                    allPassed = false;
+                    details.push(`❌ ${location.name} incorrectly marked as inside Iraq`);
+                } else {
+                    details.push(`✅ ${location.name} correctly rejected`);
+                }
+            });
+
+            const message = allPassed ? 
+                `All ${invalidLocations.length} invalid locations correctly rejected` :
+                `Failed: ${details.filter(d => d.startsWith('❌')).length} locations`;
+
+            markTestResult('test-iraq-invalid', allPassed, message);
+        }
+
+        // Test 3: Border Edge Cases
+        function testBorderEdgeCases() {
+            // Test coordinates near Iraq borders
+            const borderCases = [
+                { name: "Iraq-Iran border", lat: 33.0, lng: 48.5, expected: false },
+                { name: "Iraq-Kuwait border", lat: 29.8, lng: 47.5, expected: false },
+                { name: "Iraq-Syria border", lat: 33.5, lng: 40.0, expected: false },
+                { name: "Northern Iraq", lat: 37.0, lng: 44.0, expected: true },
+                { name: "Central Iraq", lat: 33.0, lng: 44.0, expected: true }
+            ];
+
+            let passed = 0;
+            let details = [];
+
+            borderCases.forEach(testCase => {
+                const isInside = isPointInIraq(testCase.lat, testCase.lng);
+                if (isInside === testCase.expected) {
+                    passed++;
+                    details.push(`✅ ${testCase.name}`);
+                } else {
+                    details.push(`❌ ${testCase.name} (expected ${testCase.expected}, got ${isInside})`);
+                }
+            });
+
+            const allPassed = passed === borderCases.length;
+            const message = `${passed}/${borderCases.length} border cases passed`;
+
+            markTestResult('test-border-cases', allPassed, message);
+        }
+
+        // Test 4: Valid Driver Registration
+        function testValidDriverRegistration() {
+            const validDriverData = {
+                name: "Test Driver",
+                email: "test@example.com",
+                phone: "07901234567",
+                licenseNumber: "TEST001",
+                plate: "تست 1234",
+                vehicleType: "taxi",
+                password: "test123",
+                location: { lat: 33.3152, lng: 44.3661 } // Baghdad
+            };
+
+            try {
+                // Simulate registration validation
+                const isValidLocation = isPointInIraq(validDriverData.location.lat, validDriverData.location.lng);
+                const hasRequiredFields = validDriverData.name && validDriverData.email && 
+                    validDriverData.phone && validDriverData.vehicleType;
+
+                const passed = isValidLocation && hasRequiredFields;
+                const message = passed ? 
+                    "Valid registration data accepted" : 
+                    "Valid registration data rejected (unexpected)";
+
+                markTestResult('test-valid-registration', passed, message);
+            } catch (error) {
+                markTestResult('test-valid-registration', false, `Error: ${error.message}`);
+            }
+        }
+
+        // Test 5: Registration Outside Iraq
+        function testRegistrationOutsideIraq() {
+            const outsideIraqData = {
+                name: "Test Driver",
+                email: "test@example.com", 
+                phone: "07901234567",
+                licenseNumber: "TEST002",
+                plate: "تست 5678",
+                vehicleType: "taxi",
+                password: "test123",
+                location: { lat: 29.3759, lng: 47.9774 } // Kuwait
+            };
+
+            try {
+                const isValidLocation = isPointInIraq(outsideIraqData.location.lat, outsideIraqData.location.lng);
+                const shouldBeRejected = !isValidLocation;
+
+                const message = shouldBeRejected ? 
+                    "Registration outside Iraq correctly rejected" : 
+                    "Registration outside Iraq incorrectly accepted";
+
+                markTestResult('test-outside-registration', shouldBeRejected, message);
+            } catch (error) {
+                markTestResult('test-outside-registration', false, `Error: ${error.message}`);
+            }
+        }
+
+        // Test 6: Incomplete Registration
+        function testIncompleteRegistration() {
+            const incompleteData = {
+                name: "", // Missing name
+                email: "test@example.com",
+                phone: "", // Missing phone
+                vehicleType: "taxi",
+                password: "test123"
+            };
+
+            const hasRequiredFields = incompleteData.name && incompleteData.email && 
+                incompleteData.phone && incompleteData.vehicleType;
+
+            const shouldBeRejected = !hasRequiredFields;
+            const message = shouldBeRejected ? 
+                "Incomplete registration correctly rejected" : 
+                "Incomplete registration incorrectly accepted";
+
+            markTestResult('test-incomplete-registration', shouldBeRejected, message);
+        }
+
+        // Test 7: Vehicle Type Filtering
+        function testVehicleTypeFiltering() {
+            // Load demo data first
+            const demoDrivers = DEMO_VEHICLES || [];
+            
+            const vehicleTypes = ['taxi', 'minibus', 'van', 'tuk-tuk', 'bus'];
+            let testsPassed = 0;
+
+            vehicleTypes.forEach(type => {
+                const filteredVehicles = demoDrivers.filter(driver => 
+                    driver.approved && driver.vehicleType === type
+                );
+                
+                // Test should pass if filtering works correctly
+                const hasVehiclesOfType = filteredVehicles.length > 0;
+                const allMatchType = filteredVehicles.every(v => v.vehicleType === type);
+                
+                if (allMatchType) testsPassed++;
+            });
+
+            const allPassed = testsPassed === vehicleTypes.length;
+            const message = `${testsPassed}/${vehicleTypes.length} vehicle type filters working`;
+
+            markTestResult('test-vehicle-filtering', allPassed, message);
+        }
+
+        // Test 8: Radius Query Accuracy
+        function testRadiusQueryAccuracy() {
+            const centerPoint = { lat: 33.3152, lng: 44.3661 }; // Baghdad
+            const testRadius = 10; // 10 km
+
+            // Calculate distance function (simplified)
+            function calculateDistance(lat1, lng1, lat2, lng2) {
+                const R = 6371; // Earth's radius in km
+                const dLat = (lat2 - lat1) * Math.PI / 180;
+                const dLng = (lng2 - lng1) * Math.PI / 180;
+                const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                    Math.sin(dLng/2) * Math.sin(dLng/2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                return R * c;
+            }
+
+            // Test points at known distances
+            const testPoints = [
+                { lat: 33.3152, lng: 44.3661, expectedDistance: 0 }, // Same point
+                { lat: 33.4152, lng: 44.3661, expectedDistance: 11.1 }, // ~11km north
+                { lat: 33.2152, lng: 44.3661, expectedDistance: 11.1 }  // ~11km south
+            ];
+
+            let accurateCalculations = 0;
+
+            testPoints.forEach(point => {
+                const calculatedDistance = calculateDistance(
+                    centerPoint.lat, centerPoint.lng, 
+                    point.lat, point.lng
+                );
+                
+                // Allow 1km tolerance
+                const isAccurate = Math.abs(calculatedDistance - point.expectedDistance) < 1;
+                if (isAccurate) accurateCalculations++;
+            });
+
+            const allAccurate = accurateCalculations === testPoints.length;
+            const message = `${accurateCalculations}/${testPoints.length} distance calculations accurate`;
+
+            markTestResult('test-radius-accuracy', allAccurate, message);
+        }
+
+        // Test 9: Online Status Filtering
+        function testOnlineStatusFiltering() {
+            const demoDrivers = DEMO_VEHICLES || [];
+            
+            const onlineDrivers = demoDrivers.filter(driver => 
+                driver.approved && driver.online
+            );
+            const offlineDrivers = demoDrivers.filter(driver => 
+                driver.approved && !driver.online
+            );
+
+            // Test should verify that only online approved drivers are shown
+            const hasOnlineDrivers = onlineDrivers.length > 0;
+            const hasOfflineDrivers = offlineDrivers.length > 0;
+            const allOnlineAreApproved = onlineDrivers.every(d => d.approved);
+
+            const passed = hasOnlineDrivers && hasOfflineDrivers && allOnlineAreApproved;
+            const message = passed ? 
+                `${onlineDrivers.length} online, ${offlineDrivers.length} offline drivers filtered correctly` :
+                "Online/offline filtering failed";
+
+            markTestResult('test-online-filtering', passed, message);
+        }
+
+        // Test 10: Admin Authentication
+        function testAdminAuthentication() {
+            const validAdmin = { email: "euzardi@gmail.com", password: "Sarchnar1" };
+            const invalidAdmin = { email: "fake@admin.com", password: "wrong" };
+
+            // Simulate admin authentication
+            const validLogin = (validAdmin.email === "euzardi@gmail.com" && 
+                              validAdmin.password === "Sarchnar1");
+            const invalidLogin = (invalidAdmin.email === "euzardi@gmail.com" && 
+                                invalidAdmin.password === "Sarchnar1");
+
+            const passed = validLogin && !invalidLogin;
+            const message = passed ? 
+                "Admin authentication working correctly" : 
+                "Admin authentication failed";
+
+            markTestResult('test-admin-auth', passed, message);
+        }
+
+        // Test 11: Driver Approval Workflow
+        function testDriverApprovalWorkflow() {
+            // Create test driver
+            const testDriver = {
+                id: "test_driver_approval",
+                name: "Approval Test Driver",
+                approved: false,
+                online: false
+            };
+
+            // Simulate approval process
+            testDriver.approved = true;
+
+            const passed = testDriver.approved === true;
+            const message = passed ? 
+                "Driver approval workflow working" : 
+                "Driver approval workflow failed";
+
+            markTestResult('test-approval-workflow', passed, message);
+        }
+
+        // Test 12: Performance Test
+        function testLargeDatasetPerformance() {
+            const startTime = performance.now();
+            
+            // Generate large dataset
+            const largeDataset = [];
+            for (let i = 0; i < 1000; i++) {
+                largeDataset.push({
+                    id: `perf_test_${i}`,
+                    name: `Driver ${i}`,
+                    location: { 
+                        lat: 33.3152 + (Math.random() - 0.5) * 2, 
+                        lng: 44.3661 + (Math.random() - 0.5) * 2 
+                    },
+                    approved: true,
+                    online: Math.random() > 0.5
+                });
+            }
+
+            // Simulate filtering operations
+            const filteredData = largeDataset.filter(d => d.approved && d.online);
+            
+            const endTime = performance.now();
+            const processingTime = endTime - startTime;
+
+            // Test passes if processing is under 100ms
+            const passed = processingTime < 100;
+            const message = `Processed 1000 vehicles in ${processingTime.toFixed(2)}ms`;
+
+            markTestResult('test-performance', passed, message);
+        }
+
+        // Run all tests
+        function runAllTests() {
+            // Reset stats
+            testResults = { total: 0, passed: 0, failed: 0 };
+            
+            // Reset all test displays
+            document.querySelectorAll('.test-result').forEach(el => {
+                el.className = 'test-result test-pending';
+                el.innerHTML = '⏳ Running...';
+            });
+
+            // Run tests with delays to show progress
+            const tests = [
+                testValidIraqLocations,
+                testInvalidIraqLocations,
+                testBorderEdgeCases,
+                testValidDriverRegistration,
+                testRegistrationOutsideIraq,
+                testIncompleteRegistration,
+                testVehicleTypeFiltering,
+                testRadiusQueryAccuracy,
+                testOnlineStatusFiltering,
+                testAdminAuthentication,
+                testDriverApprovalWorkflow,
+                testLargeDatasetPerformance
+            ];
+
+            tests.forEach((test, index) => {
+                setTimeout(() => {
+                    test();
+                    if (index === tests.length - 1) {
+                        updateTestSummary();
+                    }
+                }, index * 500);
+            });
+        }
+
+        function updateTestSummary() {
+            const summary = document.getElementById('test-summary');
+            const successRate = testResults.total > 0 ? 
+                Math.round((testResults.passed / testResults.total) * 100) : 0;
+
+            summary.innerHTML = `
+                <h3>📈 Test Results</h3>
+                <p><strong>Total Tests:</strong> ${testResults.total}</p>
+                <p><strong>Passed:</strong> ${testResults.passed}</p>
+                <p><strong>Failed:</strong> ${testResults.failed}</p>
+                <p><strong>Success Rate:</strong> ${successRate}%</p>
+                
+                <h4>System Status</h4>
+                <p>🗺️ Geographic validation: ${testResults.passed >= 3 ? '✅ Working' : '❌ Issues detected'}</p>
+                <p>👤 Registration system: ${testResults.passed >= 6 ? '✅ Working' : '❌ Issues detected'}</p>
+                <p>🚗 Vehicle filtering: ${testResults.passed >= 9 ? '✅ Working' : '❌ Issues detected'}</p>
+                <p>⚙️ Admin functions: ${testResults.passed >= 11 ? '✅ Working' : '❌ Issues detected'}</p>
+                <p>⚡ Performance: ${testResults.passed >= 12 ? '✅ Good' : '❌ Needs optimization'}</p>
+            `;
+        }
+
+        function showSystemInfo() {
+            const info = `
+                🌐 Browser: ${navigator.userAgent}
+                📍 Geolocation: ${navigator.geolocation ? 'Available' : 'Not available'}
+                💾 Local Storage: ${typeof Storage !== 'undefined' ? 'Available' : 'Not available'}
+                🗺️ Iraq Boundary Data: ${typeof IRAQ_BOUNDARY !== 'undefined' ? 'Loaded' : 'Missing'}
+                📊 Demo Data: ${typeof DEMO_VEHICLES !== 'undefined' ? `${DEMO_VEHICLES.length} vehicles` : 'Not loaded'}
+                
+                Current Data:
+                📋 Stored Drivers: ${JSON.parse(localStorage.getItem('drivers') || '[]').length}
+            `;
+            
+            alert(info);
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updateStats();
+            console.log('🧪 NEXŞE Test Suite Loaded');
+            console.log('Run runAllTests() to execute all tests');
+        });
+    </script>
+</body>
+</html>

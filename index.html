@@ -1,0 +1,1570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEXŞE - Real-time Vehicle Map & Registration</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --primary-color: #1e88e5;
+            --secondary-color: #43a047;
+            --danger-color: #e53935;
+            --warning-color: #fb8c00;
+            --success-color: #4caf50;
+            --dark-color: #212529;
+            --light-color: #f8f9fa;
+            --border-color: #dee2e6;
+            --shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            --border-radius: 0.375rem;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--light-color);
+            color: var(--dark-color);
+            line-height: 1.6;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 1rem 0;
+            box-shadow: var(--shadow);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #ffffff, #e3f2fd);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            overflow: hidden;
+        }
+
+        .logo-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 6px;
+        }
+
+        .logo-text {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.2;
+        }
+
+        .logo-main {
+            font-size: 1.5rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+        }
+
+        .logo-tagline {
+            font-size: 0.7rem;
+            opacity: 0.9;
+            font-weight: 300;
+            letter-spacing: 0.5px;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        /* Filters Section */
+        .filters-section {
+            background: var(--light-color);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.75rem 0;
+            position: sticky;
+            top: 80px;
+            z-index: 999;
+        }
+
+        .filters-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .locate-btn {
+            white-space: nowrap;
+        }
+
+        /* Vehicle Filter Icons */
+        .vehicle-filters-row {
+            display: flex;
+            gap: 0.5rem;
+            margin-right: 1rem;
+            align-items: center;
+        }
+
+        .filter-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid var(--border-color);
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: all 0.2s ease;
+            box-shadow: var(--shadow);
+        }
+
+        .filter-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.15);
+        }
+
+        .filter-btn.active {
+            border-color: var(--primary-color);
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .filter-btn.all-btn {
+            background: var(--secondary-color);
+            color: white;
+            border-color: var(--secondary-color);
+        }
+
+        .filter-btn.all-btn.active {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-secondary {
+            background-color: transparent;
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.1);
+        }
+
+        /* Main Content */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+
+        .section {
+            display: none;
+            min-height: calc(100vh - 80px);
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        /* Map Section */
+        .map-container {
+            position: relative;
+            height: calc(100vh - 140px); /* Adjusted for simplified filters */
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+            border-radius: var(--border-radius);
+        }
+
+        /* Forms */
+        .form-container {
+            max-width: 500px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.25rem;
+            font-weight: 500;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(30, 136, 229, 0.25);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        /* Driver Panel */
+        .driver-panel {
+            max-width: 600px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: var(--border-radius);
+            font-weight: 500;
+            margin-bottom: 1rem;
+        }
+
+        .status-online {
+            background: rgba(76, 175, 80, 0.1);
+            color: var(--success-color);
+        }
+
+        .status-offline {
+            background: rgba(158, 158, 158, 0.1);
+            color: #9e9e9e;
+        }
+
+        .status-pending {
+            background: rgba(251, 140, 0, 0.1);
+            color: var(--warning-color);
+        }
+
+        /* Admin Panel */
+        .admin-panel {
+            margin: 2rem auto;
+            padding: 2rem;
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .data-table th {
+            background-color: var(--light-color);
+            font-weight: 600;
+        }
+
+        .data-table tr:hover {
+            background-color: rgba(30, 136, 229, 0.05);
+        }
+
+        /* Vehicle Icons */
+        .vehicle-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .vehicle-icon-no-bg {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8), -1px -1px 2px rgba(255, 255, 255, 0.8);
+            filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.3));
+        }
+
+        .vehicle-with-route {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .route-label {
+            background: rgba(30, 136, 229, 0.9);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: 600;
+            white-space: nowrap;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+            text-shadow: none;
+            letter-spacing: 0.5px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .vehicle-marker {
+            background: none !important;
+            border: none !important;
+        }
+
+        .vehicle-taxi { background: #FFD700; }
+        .vehicle-minibus { background: #4CAF50; color: white; }
+        .vehicle-tuk-tuk { background: #FF9800; color: white; }
+        .vehicle-van { background: #2196F3; color: white; }
+        .vehicle-bus { background: #F44336; color: white; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .nav-buttons {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .map-container {
+                height: calc(100vh - 180px); /* Adjusted for simplified filters */
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .form-container,
+            .driver-panel,
+            .admin-panel {
+                margin: 1rem;
+                padding: 1rem;
+            }
+        }
+
+        /* Loading Spinner */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Modern Dashboard Styles */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .dashboard-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .dashboard-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .dashboard-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .card-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .card-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            color: white;
+        }
+
+        .card-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--dark-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .card-description {
+            font-size: 0.875rem;
+            color: #6b7280;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .trend-up {
+            color: var(--success-color);
+        }
+
+        .trend-down {
+            color: var(--danger-color);
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .chart-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--dark-color);
+        }
+
+        .chart-canvas {
+            max-height: 300px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 1rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-number {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin-top: 0.25rem;
+        }
+
+        .recent-activity {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .activity-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .activity-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.875rem;
+            color: white;
+        }
+
+        .activity-content {
+            flex: 1;
+        }
+
+        .activity-title {
+            font-weight: 500;
+            color: var(--dark-color);
+            margin-bottom: 0.25rem;
+        }
+
+        .activity-time {
+            font-size: 0.75rem;
+            color: #6b7280;
+        }
+
+        .dashboard-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .dashboard-tab {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            background: none;
+            color: #6b7280;
+            font-weight: 500;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s ease;
+        }
+
+        .dashboard-tab.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+        }
+
+        .dashboard-tab:hover {
+            color: var(--primary-color);
+        }
+
+        .dashboard-content {
+            display: none;
+        }
+
+        .dashboard-content.active {
+            display: block;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .dashboard-card {
+            animation: fadeInUp 0.5s ease forwards;
+        }
+
+        .dashboard-card:nth-child(2) {
+            animation-delay: 0.1s;
+        }
+
+        .dashboard-card:nth-child(3) {
+            animation-delay: 0.2s;
+        }
+
+        .dashboard-card:nth-child(4) {
+            animation-delay: 0.3s;
+        }
+
+        /* Modal Styles */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            max-width: 800px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border-radius: 12px 12px 0 0;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            font-size: 1.25rem;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 4px;
+            transition: background-color 0.2s ease;
+        }
+
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+            padding: 1.5rem;
+            border-top: 1px solid var(--border-color);
+            background: var(--light-color);
+            border-radius: 0 0 12px 12px;
+        }
+
+        /* Badges */
+        .badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .badge-success {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .badge-warning {
+            background: var(--warning-color);
+            color: white;
+        }
+
+        .badge-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        /* Small buttons */
+        .btn-sm {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+            margin: 0 0.125rem;
+        }
+
+        /* Alerts */
+        .alert {
+            padding: 0.75rem 1rem;
+            margin-bottom: 1rem;
+            border: 1px solid transparent;
+            border-radius: var(--border-radius);
+        }
+
+        .alert-success {
+            color: #155724;
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+        }
+
+        .alert-danger {
+            color: #721c24;
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+        }
+
+        .alert-warning {
+            color: #856404;
+            background-color: #fff3cd;
+            border-color: #ffeaa7;
+        }
+
+        /* Toggle Switch */
+        .toggle {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+
+        .toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: 0.4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: 0.4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--success-color);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-icon">
+                    <img src="./address_12522440.png" alt="NEXŞE Logo" 
+                         onerror="this.onerror=null; this.src='./address_12522440.jpg'; 
+                         if(this.src.includes('.jpg')) { this.style.display='none'; this.parentNode.innerHTML='🚗'; }">
+                </div>
+                <div class="logo-text">
+                    <div class="logo-main">NEXŞE</div>
+                    <div class="logo-tagline">Kurdistan Vehicle Tracker</div>
+                </div>
+            </div>
+            <nav class="nav-buttons">
+                <button class="btn btn-secondary" onclick="showSection('map')">
+                    <i class="fas fa-map"></i> Map
+                </button>
+                <button class="btn btn-secondary" onclick="showSection('register')">
+                    <i class="fas fa-user-plus"></i> Register
+                </button>
+                <button class="btn btn-secondary" onclick="showSection('driver')">
+                    <i class="fas fa-car"></i> Driver Panel
+                </button>
+                <button class="btn btn-secondary" onclick="showSection('about')">
+                    <i class="fas fa-info-circle"></i> About Us
+                </button>
+                <button class="btn btn-secondary" onclick="showSection('admin')">
+                    <i class="fas fa-cog"></i> Admin
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Vehicle Filters Section -->
+    <div class="filters-section">
+        <div class="filters-container">
+            <!-- Vehicle Filter Icons (no text labels) -->
+            <div id="vehicle-filters" class="vehicle-filters-row">
+                <!-- Filter buttons will be populated by JavaScript -->
+            </div>
+            <button class="btn btn-primary locate-btn" onclick="locateUser()">
+                <i class="fas fa-crosshairs"></i> Find My Location
+            </button>
+        </div>
+    </div>
+
+    <main>
+        <!-- Map Section -->
+        <section id="map-section" class="section active">
+            <div class="map-container">
+                <div id="map"></div>
+            </div>
+        </section>
+
+        <!-- Registration Section -->
+        <section id="register-section" class="section">
+            <div class="container">
+                <div class="form-container">
+                    <h2><i class="fas fa-user-plus"></i> Driver Registration</h2>
+                    <form id="registration-form">
+                        <div class="form-group">
+                            <label for="driver-name">Full Name *</label>
+                            <input type="text" id="driver-name" class="form-control" required>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="driver-email">Email *</label>
+                                <input type="email" id="driver-email" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="driver-phone">Phone *</label>
+                                <input type="tel" id="driver-phone" class="form-control" required>
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="license-number">License Number *</label>
+                                <input type="text" id="license-number" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="vehicle-plate">Vehicle Plate *</label>
+                                <input type="text" id="vehicle-plate" class="form-control" required>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="vehicle-type">Vehicle Type *</label>
+                            <select id="vehicle-type" class="form-control" required>
+                                <option value="">Select Vehicle Type</option>
+                                <option value="taxi">🚕 Taxi</option>
+                                <option value="minibus">🚐 Minibus</option>
+                                <option value="tuk-tuk">🛺 Tuk-tuk</option>
+                                <option value="van">🚐 Van</option>
+                                <option value="bus">🚌 Bus</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Route fields for buses -->
+                        <div id="bus-fields" style="display: none;">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="route-from">Route From</label>
+                                    <input type="text" id="route-from" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label for="route-to">Route To</label>
+                                    <input type="text" id="route-to" class="form-control">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Taxi number field -->
+                        <div id="taxi-fields" style="display: none;">
+                            <div class="form-group">
+                                <label for="taxi-number">Taxi Number</label>
+                                <input type="text" id="taxi-number" class="form-control">
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="driver-password">Password *</label>
+                            <input type="password" id="driver-password" class="form-control" required>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary" style="width: 100%;">
+                            <i class="fas fa-user-plus"></i> Register Driver
+                        </button>
+                        
+                        <div id="registration-message" class="mt-3"></div>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- Driver Panel Section -->
+        <section id="driver-section" class="section">
+            <div class="container">
+                <!-- Login Form -->
+                <div id="driver-login" class="form-container">
+                    <h2><i class="fas fa-sign-in-alt"></i> Driver Login</h2>
+                    <form id="driver-login-form">
+                        <div class="form-group">
+                            <label for="login-email">Email</label>
+                            <input type="email" id="login-email" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="login-password">Password</label>
+                            <input type="password" id="login-password" class="form-control" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="width: 100%;">
+                            <i class="fas fa-sign-in-alt"></i> Login
+                        </button>
+                        <div id="login-message" class="mt-3"></div>
+                    </form>
+                </div>
+
+                <!-- Driver Dashboard -->
+                <div id="driver-dashboard" class="driver-panel" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                        <h2><i class="fas fa-tachometer-alt"></i> Driver Dashboard</h2>
+                        <button class="btn btn-secondary" onclick="logoutDriver()">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </button>
+                    </div>
+                    
+                    <div id="driver-status" class="status-indicator status-offline">
+                        <i class="fas fa-circle"></i>
+                        <span>Offline</span>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <span>Online Status:</span>
+                            <label class="toggle">
+                                <input type="checkbox" id="online-toggle">
+                                <span class="slider"></span>
+                            </label>
+                        </label>
+                    </div>
+                    
+                    <div class="form-group">
+                        <button class="btn btn-primary" onclick="updateLocation()">
+                            <i class="fas fa-map-marker-alt"></i> Update My Location
+                        </button>
+                        <small style="display: block; margin-top: 0.5rem; color: #666;">
+                            Manual location update (one-time)
+                        </small>
+                    </div>
+                    
+                    <div id="driver-info">
+                        <!-- Driver info will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- About Us Section -->
+        <section id="about-section" class="section">
+            <div class="container">
+                <div class="form-container" style="max-width: 800px;">
+                    <div id="about-content">
+                        <h2><i class="fas fa-info-circle"></i> About NEXŞE</h2>
+                        
+                        <div class="about-hero" style="text-align: center; margin-bottom: 2rem;">
+                            <h3 style="color: var(--primary-color); margin-bottom: 1rem;">Iraq's Premier Vehicle Tracking Platform</h3>
+                            <p style="font-size: 1.1rem; color: #666; line-height: 1.6;">Connecting drivers and passengers across Iraq with real-time tracking and secure transportation services.</p>
+                        </div>
+                        
+                        <div id="about-main-content">
+                            <!-- Content will be loaded from localStorage or default content -->
+                        </div>
+                        
+                        <div class="about-features" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin: 2rem 0;">
+                            <div class="feature-card" style="background: #f8f9fa; padding: 1.5rem; border-radius: 8px; text-align: center;">
+                                <i class="fas fa-map-marked-alt" style="font-size: 2rem; color: var(--primary-color); margin-bottom: 1rem;"></i>
+                                <h4>Real-time Tracking</h4>
+                                <p>Track vehicles in real-time across Iraq with precise location updates.</p>
+                            </div>
+                            <div class="feature-card" style="background: #f8f9fa; padding: 1.5rem; border-radius: 8px; text-align: center;">
+                                <i class="fas fa-shield-alt" style="font-size: 2rem; color: var(--secondary-color); margin-bottom: 1rem;"></i>
+                                <h4>Secure Platform</h4>
+                                <p>Advanced security measures ensure safe and reliable transportation.</p>
+                            </div>
+                            <div class="feature-card" style="background: #f8f9fa; padding: 1.5rem; border-radius: 8px; text-align: center;">
+                                <i class="fas fa-users" style="font-size: 2rem; color: var(--warning-color); margin-bottom: 1rem;"></i>
+                                <h4>Professional Drivers</h4>
+                                <p>Verified and approved drivers providing quality transportation services.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="contact-info" style="background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: white; padding: 2rem; border-radius: 12px; text-align: center; margin-top: 2rem;">
+                            <h3 style="margin-bottom: 1rem;">Get in Touch</h3>
+                            <div id="contact-details">
+                                <!-- Contact details will be loaded from admin settings -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Admin Section -->
+        <section id="admin-section" class="section">
+            <div class="container">
+                <!-- Admin Login -->
+                <div id="admin-login" class="form-container">
+                    <h2><i class="fas fa-shield-alt"></i> Admin Login</h2>
+                    <form id="admin-login-form">
+                        <div class="form-group">
+                            <label for="admin-email">Admin Email</label>
+                            <input type="email" id="admin-email" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="admin-password">Password</label>
+                            <input type="password" id="admin-password" class="form-control" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="width: 100%;">
+                            <i class="fas fa-sign-in-alt"></i> Login
+                        </button>
+                        <div id="admin-login-message" class="mt-3"></div>
+                    </form>
+                </div>
+
+                <!-- Admin Dashboard -->
+                <div id="admin-dashboard" class="admin-panel" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                        <h2><i class="fas fa-cogs"></i> Admin Dashboard</h2>
+                        <button class="btn btn-secondary" onclick="logoutAdmin()">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </button>
+                    </div>
+                    
+                    <!-- Dashboard Tabs -->
+                    <div class="dashboard-tabs">
+                        <button class="dashboard-tab active" onclick="showDashboardTab('overview')">📊 Overview</button>
+                        <button class="dashboard-tab" onclick="showDashboardTab('drivers')">🚗 Drivers</button>
+                        <button class="dashboard-tab" onclick="showDashboardTab('content')">📝 Content</button>
+                        <button class="dashboard-tab" onclick="showDashboardTab('analytics')">📈 Analytics</button>
+                        <button class="dashboard-tab" onclick="showDashboardTab('settings')">⚙️ Settings</button>
+                    </div>
+                    
+                    <!-- Overview Tab -->
+                    <div id="dashboard-overview" class="dashboard-content active">
+                        <!-- Statistics Cards -->
+                        <div class="dashboard-grid">
+                            <div class="dashboard-card">
+                                <div class="card-header">
+                                    <div class="card-title">Total Drivers</div>
+                                    <div class="card-icon" style="background: linear-gradient(135deg, #667eea, #764ba2);">
+                                        <i class="fas fa-users"></i>
+                                    </div>
+                                </div>
+                                <div class="card-value" id="total-drivers">0</div>
+                                <div class="card-description">
+                                    <i class="fas fa-arrow-up trend-up"></i>
+                                    <span id="drivers-trend">+0 this week</span>
+                                </div>
+                            </div>
+                            
+                            <div class="dashboard-card">
+                                <div class="card-header">
+                                    <div class="card-title">Online Now</div>
+                                    <div class="card-icon" style="background: linear-gradient(135deg, #f093fb, #f5576c);">
+                                        <i class="fas fa-circle"></i>
+                                    </div>
+                                </div>
+                                <div class="card-value" id="online-drivers">0</div>
+                                <div class="card-description">
+                                    <i class="fas fa-clock"></i>
+                                    <span>Real-time count</span>
+                                </div>
+                            </div>
+                            
+                            <div class="dashboard-card">
+                                <div class="card-header">
+                                    <div class="card-title">Pending Approvals</div>
+                                    <div class="card-icon" style="background: linear-gradient(135deg, #ffecd2, #fcb69f);">
+                                        <i class="fas fa-clock"></i>
+                                    </div>
+                                </div>
+                                <div class="card-value" id="pending-approvals">0</div>
+                                <div class="card-description">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <span>Awaiting review</span>
+                                </div>
+                            </div>
+                            
+                            <div class="dashboard-card">
+                                <div class="card-header">
+                                    <div class="card-title">Vehicle Types</div>
+                                    <div class="card-icon" style="background: linear-gradient(135deg, #a8edea, #fed6e3);">
+                                        <i class="fas fa-car"></i>
+                                    </div>
+                                </div>
+                                <div class="card-value" id="vehicle-types">5</div>
+                                <div class="card-description">
+                                    <i class="fas fa-check-circle"></i>
+                                    <span>Active types</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Charts Section -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+                            <div class="chart-container">
+                                <div class="chart-header">
+                                    <h3 class="chart-title">Driver Distribution</h3>
+                                </div>
+                                <canvas id="vehicle-chart" class="chart-canvas"></canvas>
+                            </div>
+                            
+                            <div class="chart-container">
+                                <div class="chart-header">
+                                    <h3 class="chart-title">Registration Timeline</h3>
+                                </div>
+                                <canvas id="registration-chart" class="chart-canvas"></canvas>
+                            </div>
+                        </div>
+                        
+                        <!-- Recent Activity -->
+                        <div class="recent-activity">
+                            <h3 style="margin-bottom: 1rem;">📋 Recent Activity</h3>
+                            <div id="recent-activity-list">
+                                <!-- Activity items will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Drivers Tab -->
+                    <div id="dashboard-drivers" class="dashboard-content">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <h3>Driver Management</h3>
+                            <div>
+                                <button class="btn btn-success" onclick="app.showAddDriverModal()">
+                                    <i class="fas fa-plus"></i> Add Driver
+                                </button>
+                                <button class="btn btn-secondary" onclick="app.debugDrivers()">
+                                    <i class="fas fa-bug"></i> Debug
+                                </button>
+                                <button class="btn btn-primary" onclick="app.loadAdminData()">
+                                    <i class="fas fa-sync"></i> Refresh
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <h3>Pending Driver Approvals</h3>
+                            <table class="data-table" id="pending-drivers-table">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Email</th>
+                                        <th>Phone</th>
+                                        <th>Vehicle</th>
+                                        <th>Plate</th>
+                                        <th>Details</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="pending-drivers-tbody">
+                                    <!-- Pending drivers will be populated here -->
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="form-group">
+                            <h3>All Drivers</h3>
+                            <table class="data-table" id="all-drivers-table">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Email</th>
+                                        <th>Phone</th>
+                                        <th>Vehicle</th>
+                                        <th>Plate</th>
+                                        <th>Details</th>
+                                        <th>Status</th>
+                                        <th>Location</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="all-drivers-tbody">
+                                    <!-- All drivers will be populated here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Content Management Tab -->
+                    <div id="dashboard-content" class="dashboard-content">
+                        <h3><i class="fas fa-edit"></i> Content Management</h3>
+                        
+                        <!-- About Us Content Editor -->
+                        <div class="form-group">
+                            <h4>About Us Page Content</h4>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="company-name">Company Name</label>
+                                    <input type="text" id="company-name" class="form-control" placeholder="NEXŞE">
+                                </div>
+                                <div class="form-group">
+                                    <label for="company-tagline">Tagline</label>
+                                    <input type="text" id="company-tagline" class="form-control" placeholder="Iraq's Premier Vehicle Tracking Platform">
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="company-description">Main Description</label>
+                                <textarea id="company-description" class="form-control" rows="4" placeholder="Tell your story here..."></textarea>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="company-mission">Mission Statement</label>
+                                <textarea id="company-mission" class="form-control" rows="3" placeholder="Our mission and vision..."></textarea>
+                            </div>
+                            
+                            <hr>
+                            
+                            <h4>Contact Information</h4>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="contact-phone">Phone Number</label>
+                                    <input type="tel" id="contact-phone" class="form-control" placeholder="+964 xxx xxx xxx">
+                                </div>
+                                <div class="form-group">
+                                    <label for="contact-email">Email Address</label>
+                                    <input type="email" id="contact-email" class="form-control" placeholder="info@nishan.iq">
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="contact-address">Office Address</label>
+                                <textarea id="contact-address" class="form-control" rows="2" placeholder="Baghdad, Iraq"></textarea>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="social-links">Social Media Links (JSON format)</label>
+                                <textarea id="social-links" class="form-control" rows="3" placeholder='{"facebook": "https://facebook.com/nishan", "twitter": "https://twitter.com/nishan"}'></textarea>
+                                <small>Enter social media links in JSON format</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <button class="btn btn-primary" onclick="app.saveAboutContent()">
+                                    <i class="fas fa-save"></i> Save Content
+                                </button>
+                                <button class="btn btn-secondary" onclick="app.loadAboutContent()">
+                                    <i class="fas fa-sync"></i> Reload
+                                </button>
+                                <button class="btn btn-success" onclick="app.previewAboutContent()">
+                                    <i class="fas fa-eye"></i> Preview
+                                </button>
+                            </div>
+                            
+                            <div id="content-management-message"></div>
+                        </div>
+                        
+                        <!-- Additional Content Sections -->
+                        <div class="form-group">
+                            <h4>Additional Sections</h4>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                                <div class="stat-item">
+                                    <div class="stat-number" id="content-words">0</div>
+                                    <div class="stat-label">Total Words</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-number" id="last-updated">Never</div>
+                                    <div class="stat-label">Last Updated</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-number" id="content-status">Draft</div>
+                                    <div class="stat-label">Status</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Analytics Tab -->
+                    <div id="dashboard-analytics" class="dashboard-content">
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <div class="stat-number" id="avg-response-time">2.3s</div>
+                                <div class="stat-label">Avg Response Time</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-number" id="system-uptime">99.9%</div>
+                                <div class="stat-label">System Uptime</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-number" id="emails-sent">0</div>
+                                <div class="stat-label">Emails Sent</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-number" id="map-views">1,234</div>
+                                <div class="stat-label">Map Views</div>
+                            </div>
+                        </div>
+                        
+                        <div class="chart-container">
+                            <div class="chart-header">
+                                <h3 class="chart-title">Daily Active Drivers</h3>
+                            </div>
+                            <canvas id="activity-chart" class="chart-canvas"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- Settings Tab -->
+                    <div id="dashboard-settings" class="dashboard-content">
+                        <!-- Email Configuration Section -->
+                        <div class="form-group">
+                            <h3><i class="fas fa-envelope"></i> Email System Configuration</h3>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="emailjs-service-id">EmailJS Service ID</label>
+                                    <input type="text" id="emailjs-service-id" class="form-control" placeholder="your_service_id">
+                                </div>
+                                <div class="form-group">
+                                    <label for="emailjs-template-id">EmailJS Template ID</label>
+                                    <input type="text" id="emailjs-template-id" class="form-control" placeholder="your_template_id">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="emailjs-user-id">EmailJS User ID</label>
+                                <input type="text" id="emailjs-user-id" class="form-control" placeholder="your_user_id">
+                            </div>
+                            <div class="form-group">
+                                <button class="btn btn-primary" onclick="app.configureEmailService()">
+                                    <i class="fas fa-save"></i> Save Email Configuration
+                                </button>
+                                <button class="btn btn-secondary" onclick="app.testEmailService()">
+                                    <i class="fas fa-envelope"></i> Test Email System
+                                </button>
+                            </div>
+                            <div id="email-config-message"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Driver Management Modals -->
+    <!-- Add/Edit Driver Modal -->
+    <div id="driver-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="driver-modal-title"><i class="fas fa-plus"></i> Add New Driver</h3>
+                <button class="modal-close" onclick="app.closeDriverModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="driver-modal-form">
+                    <input type="hidden" id="modal-driver-id">
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="modal-driver-name">Full Name *</label>
+                            <input type="text" id="modal-driver-name" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="modal-driver-email">Email *</label>
+                            <input type="email" id="modal-driver-email" class="form-control" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="modal-driver-phone">Phone *</label>
+                            <input type="tel" id="modal-driver-phone" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="modal-license-number">License Number *</label>
+                            <input type="text" id="modal-license-number" class="form-control" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="modal-vehicle-plate">Vehicle Plate *</label>
+                            <input type="text" id="modal-vehicle-plate" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="modal-vehicle-type">Vehicle Type *</label>
+                            <select id="modal-vehicle-type" class="form-control" required>
+                                <option value="">Select Vehicle Type</option>
+                                <option value="taxi">🚕 Taxi</option>
+                                <option value="minibus">🚐 Minibus</option>
+                                <option value="tuk-tuk">🛺 Tuk-tuk</option>
+                                <option value="van">🚐 Van</option>
+                                <option value="bus">🚌 Bus</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Route fields for buses -->
+                    <div id="modal-bus-fields" style="display: none;">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="modal-route-from">Route From</label>
+                                <input type="text" id="modal-route-from" class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <label for="modal-route-to">Route To</label>
+                                <input type="text" id="modal-route-to" class="form-control">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Taxi number field -->
+                    <div id="modal-taxi-fields" style="display: none;">
+                        <div class="form-group">
+                            <label for="modal-taxi-number">Taxi Number</label>
+                            <input type="text" id="modal-taxi-number" class="form-control">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="modal-driver-password">Password *</label>
+                            <input type="password" id="modal-driver-password" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Status</label>
+                            <div style="display: flex; gap: 1rem; align-items: center;">
+                                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <input type="checkbox" id="modal-driver-approved"> Approved
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <input type="checkbox" id="modal-driver-online"> Force Online
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="driver-modal-message"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="app.closeDriverModal()">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="app.saveDriver()">
+                    <i class="fas fa-save"></i> Save Driver
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+    
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth-compat.js"></script>
+    
+    <!-- EmailJS for client-side email sending -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    
+    <!-- Chart.js for dashboard charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Application Scripts -->
+    <script src="iraq-boundary.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="email-service.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
