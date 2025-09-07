@@ -218,6 +218,20 @@
             padding: 0 1rem;
         }
 
+        /* Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 0.5rem;
+            }
+        }
+        
+        /* Sections */
         .section {
             display: none;
             min-height: calc(100vh - 80px);
@@ -355,6 +369,39 @@
             justify-content: center;
             font-size: 1.2rem;
         }
+        
+        /* Vehicle Markers and Popups - Mobile Optimized */
+        .vehicle-popup {
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+        
+        .vehicle-popup h4 {
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+        }
+        
+        .vehicle-popup p {
+            margin-bottom: 0.25rem;
+        }
+        
+        .vehicle-popup a {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            .vehicle-popup {
+                font-size: 0.85rem;
+                max-width: 200px;
+            }
+            
+            .vehicle-popup h4 {
+                font-size: 0.9rem;
+                margin-bottom: 0.3rem;
+            }
+        }
 
         .vehicle-icon-no-bg {
             display: flex;
@@ -397,31 +444,492 @@
         .vehicle-van { background: #2196F3; color: white; }
         .vehicle-bus { background: #F44336; color: white; }
 
-        /* Responsive */
+        /* Enhanced Mobile Responsiveness */
         @media (max-width: 768px) {
+            /* Header adjustments */
+            .header {
+                padding: 0.75rem 0;
+            }
+            
             .header-content {
                 flex-direction: column;
-                gap: 1rem;
+                gap: 0.75rem;
+                padding: 0 0.5rem;
+            }
+            
+            .logo {
+                font-size: 1.25rem;
+            }
+            
+            .logo-main {
+                font-size: 1.25rem;
+            }
+            
+            .logo-tagline {
+                font-size: 0.65rem;
             }
 
             .nav-buttons {
                 flex-wrap: wrap;
                 justify-content: center;
+                gap: 0.25rem;
+            }
+            
+            .nav-buttons .btn {
+                padding: 0.4rem 0.8rem;
+                font-size: 0.8rem;
+                min-height: 44px;
             }
 
+            /* Filters section for mobile */
+            .filters-section {
+                padding: 0.5rem 0;
+                top: 70px;
+            }
+            
+            .filters-container {
+                padding: 0 0.5rem;
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            
+            .vehicle-filters-row {
+                order: 1;
+                margin: 0;
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+            
+            .filter-btn {
+                width: 44px;
+                height: 44px;
+                font-size: 1rem;
+                margin: 0.125rem;
+                min-height: 44px;
+                touch-action: manipulation;
+            }
+            
+            .locate-btn {
+                order: 2;
+                font-size: 0.8rem;
+                padding: 0.4rem 0.8rem;
+                min-height: 44px;
+            }
+
+            /* Map container */
             .map-container {
-                height: calc(100vh - 180px); /* Adjusted for simplified filters */
+                height: calc(100vh - 160px);
+                margin: 0;
+            }
+            
+            #map {
+                border-radius: 0;
             }
 
+            /* Forms and containers */
             .form-row {
                 grid-template-columns: 1fr;
+                gap: 0.5rem;
             }
 
-            .form-container,
+            .form-container {
+                margin: 0.5rem;
+                padding: 1rem;
+                max-width: none;
+            }
+            
             .driver-panel,
             .admin-panel {
-                margin: 1rem;
+                margin: 0.5rem;
                 padding: 1rem;
+            }
+            
+            .form-control {
+                padding: 0.6rem;
+                font-size: 16px !important; /* Prevent zoom on input focus */
+            }
+            
+            .btn {
+                padding: 0.6rem 1rem;
+                font-size: 0.9rem;
+                min-height: 44px;
+                touch-action: manipulation;
+            }
+
+            /* Dashboard improvements for mobile */
+            .dashboard-grid {
+                grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+                gap: 0.75rem;
+                margin-bottom: 1rem;
+            }
+            
+            .dashboard-card {
+                padding: 1rem;
+            }
+            
+            .card-value {
+                font-size: 1.5rem;
+            }
+            
+            .card-title {
+                font-size: 0.75rem;
+            }
+            
+            .card-icon {
+                width: 32px;
+                height: 32px;
+                font-size: 1rem;
+            }
+
+            /* Charts for mobile */
+            .chart-container {
+                padding: 1rem;
+                margin-bottom: 1rem;
+            }
+            
+            .chart-canvas {
+                max-height: 250px;
+            }
+            
+            .charts-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            /* Dashboard tabs for mobile */
+            .dashboard-tabs {
+                flex-wrap: wrap;
+                gap: 0.25rem;
+                margin-bottom: 1rem;
+            }
+            
+            .dashboard-tab {
+                padding: 0.5rem 0.75rem;
+                font-size: 0.8rem;
+                flex: 1;
+                min-width: auto;
+                text-align: center;
+                min-height: 44px;
+            }
+
+            /* Tables for mobile */
+            .data-table {
+                font-size: 0.8rem;
+                display: block;
+                overflow-x: auto;
+                white-space: nowrap;
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            .data-table th,
+            .data-table td {
+                padding: 0.5rem 0.25rem;
+                min-width: 80px;
+            }
+            
+            .data-table th:first-child,
+            .data-table td:first-child {
+                position: sticky;
+                left: 0;
+                background: white;
+                z-index: 1;
+            }
+
+            /* Modal adjustments for mobile */
+            .modal-content {
+                margin: 1rem;
+                max-width: none;
+                width: calc(100% - 2rem);
+                max-height: calc(100vh - 2rem);
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            .modal-body {
+                padding: 1rem;
+            }
+            
+            .modal-footer {
+                padding: 1rem;
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            
+            .modal-footer .btn {
+                width: 100%;
+                min-height: 44px;
+            }
+
+            /* Section adjustments */
+            .section {
+                min-height: calc(100vh - 70px);
+            }
+
+            /* Container padding */
+            .container {
+                padding: 0 0.5rem;
+            }
+
+            /* About section features grid */
+            .about-features {
+                grid-template-columns: 1fr !important;
+                gap: 1rem !important;
+            }
+            
+            .feature-card {
+                padding: 1rem !important;
+            }
+
+            /* Activity items for mobile */
+            .activity-item {
+                padding: 0.5rem 0;
+                gap: 0.5rem;
+            }
+            
+            .activity-icon {
+                width: 28px;
+                height: 28px;
+                font-size: 0.75rem;
+            }
+            
+            /* Tap highlight removal */
+            .btn, .filter-btn, .dashboard-tab {
+                -webkit-tap-highlight-color: transparent;
+            }
+
+            /* Vehicle popup mobile optimization */
+            .vehicle-popup {
+                font-size: 0.85rem;
+                max-width: 200px;
+            }
+            
+            .vehicle-popup h4 {
+                font-size: 0.9rem;
+                margin-bottom: 0.3rem;
+            }
+        }
+
+        /* Touch-friendly mobile improvements */
+        @media (max-width: 768px) {
+            /* Larger touch targets */
+            .btn {
+                min-height: 44px;
+                touch-action: manipulation;
+            }
+            
+            .filter-btn {
+                min-height: 44px;
+                width: 44px;
+                height: 44px;
+                touch-action: manipulation;
+            }
+            
+            /* Prevent zoom on input focus */
+            .form-control {
+                font-size: 16px !important;
+            }
+            
+            /* Smooth scrolling */
+            .data-table {
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            .modal-content {
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            /* Tap highlight removal */
+            .btn, .filter-btn, .dashboard-tab {
+                -webkit-tap-highlight-color: transparent;
+            }
+            
+            /* Section adjustments */
+            .section {
+                min-height: calc(100vh - 70px);
+            }
+
+            /* Container padding */
+            .container {
+                padding: 0 0.5rem;
+            }
+
+            /* About section features grid */
+            .about-features {
+                grid-template-columns: 1fr !important;
+                gap: 1rem !important;
+            }
+            
+            .feature-card {
+                padding: 1rem !important;
+            }
+
+            /* Activity items for mobile */
+            .activity-item {
+                padding: 0.5rem 0;
+                gap: 0.5rem;
+            }
+            
+            .activity-icon {
+                width: 28px;
+                height: 28px;
+                font-size: 0.75rem;
+            }
+        }
+
+        /* Additional mobile breakpoint for very small screens */
+        @media (max-width: 480px) {
+            .header-content {
+                padding: 0 0.25rem;
+            }
+            
+            .logo {
+                font-size: 1.1rem;
+            }
+            
+            .logo-main {
+                font-size: 1.1rem;
+            }
+            
+            .nav-buttons .btn {
+                padding: 0.35rem 0.6rem;
+                font-size: 0.75rem;
+                min-height: 44px;
+            }
+            
+            .filter-btn {
+                width: 44px;
+                height: 44px;
+                font-size: 0.9rem;
+                min-height: 44px;
+            }
+            
+            .dashboard-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 0.5rem;
+            }
+            
+            .dashboard-card {
+                padding: 0.75rem;
+            }
+            
+            .card-value {
+                font-size: 1.25rem;
+            }
+            
+            .form-container {
+                margin: 0.25rem;
+                padding: 0.75rem;
+            }
+            
+            .map-container {
+                height: calc(100vh - 140px);
+            }
+            
+            /* Larger touch targets for small screens */
+            .btn {
+                min-height: 44px;
+                font-size: 0.8rem;
+            }
+            
+            .dashboard-tab {
+                min-height: 44px;
+                padding: 0.6rem 0.4rem;
+            }
+        }
+
+        /* Tablet responsive improvements */
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .dashboard-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .form-container {
+                max-width: 600px;
+            }
+            
+            .data-table {
+                font-size: 0.9rem;
+            }
+            
+            .charts-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            
+            .nav-buttons .btn {
+                padding: 0.5rem 0.8rem;
+                font-size: 0.85rem;
+            }
+            
+            .filter-btn {
+                width: 40px;
+                height: 40px;
+            }
+        }
+
+        /* Prevent iOS zoom on input focus and improve mobile forms */
+        @media (max-width: 768px) {
+            /* Better mobile form styling */
+            select.form-control {
+                font-size: 16px !important;
+                background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+                background-position: right 0.5rem center;
+                background-repeat: no-repeat;
+                background-size: 1.5em 1.5em;
+                padding-right: 2.5rem;
+                -webkit-appearance: none;
+                -moz-appearance: none;
+                appearance: none;
+            }
+            
+            /* Better button spacing and sizing */
+            .btn + .btn {
+                margin-left: 0;
+                margin-top: 0.5rem;
+            }
+            
+            /* Improve modal button layout */
+            .modal-footer {
+                flex-direction: column-reverse;
+            }
+            
+            /* Better navigation for mobile */
+            .nav-buttons {
+                width: 100%;
+            }
+            
+            .nav-buttons .btn {
+                flex: 1;
+                text-align: center;
+            }
+            
+            /* Improve map controls for mobile */
+            .leaflet-control-container {
+                font-size: 1.1rem;
+            }
+            
+            .leaflet-control-zoom a {
+                width: 40px;
+                height: 40px;
+                line-height: 40px;
+                font-size: 1.2rem;
+            }
+            
+            /* Better mobile status indicators */
+            .status-indicator {
+                font-size: 0.9rem;
+                padding: 0.6rem 1rem;
+            }
+            
+            /* Enhanced form spacing for mobile */
+            .form-group {
+                margin-bottom: 1.2rem;
+            }
+            
+            /* Better mobile table headers */
+            .data-table th {
+                font-size: 0.75rem;
+                font-weight: 700;
+                text-transform: uppercase;
             }
         }
 
@@ -546,6 +1054,21 @@
 
         .chart-canvas {
             max-height: 300px;
+        }
+        
+        /* Charts grid responsive */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        @media (max-width: 768px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
         }
 
         .stats-grid {
@@ -1202,8 +1725,8 @@
                             </div>
                         </div>
                         
-                        <!-- Charts Section -->
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+                        <!-- Charts Section */
+                        <div class="charts-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
                             <div class="chart-container">
                                 <div class="chart-header">
                                     <h3 class="chart-title">Driver Distribution</h3>
