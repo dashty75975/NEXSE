@@ -1759,6 +1759,15 @@
                                 <button class="btn btn-success" onclick="app.showAddDriverModal()">
                                     <i class="fas fa-plus"></i> Add Driver
                                 </button>
+                                <button class="btn btn-warning" onclick="app.forceMovementUpdate()">
+                                    <i class="fas fa-sync-alt"></i> Force Movement
+                                </button>
+                                <button class="btn btn-info" onclick="app.toggleMovementSimulation()">
+                                    <i class="fas fa-play"></i> Toggle Simulation
+                                </button>
+                                <button class="btn btn-outline-primary" onclick="app.enableTestDrivers()">
+                                    <i class="fas fa-users"></i> Enable Test Drivers
+                                </button>
                                 <button class="btn btn-secondary" onclick="app.debugDrivers()">
                                     <i class="fas fa-bug"></i> Debug
                                 </button>
@@ -1766,6 +1775,13 @@
                                     <i class="fas fa-sync"></i> Refresh
                                 </button>
                             </div>
+                        </div>
+                        
+                        <!-- Real-time Status Info -->
+                        <div class="alert alert-info" style="margin-bottom: 1rem;">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>Real-time Tracking Status:</strong> Movement simulation runs every 15 seconds for approved online drivers. 
+                            Use "Force Movement" to trigger immediate updates, or "Toggle Simulation" to enable/disable automatic movement.
                         </div>
                         
                         <div class="form-group">

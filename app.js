@@ -38,11 +38,18 @@ class IraqVehicleTracker {
         try {
             this.initMap();
             this.setupEventListeners();
-            await this.loadVehicleTypes(); // Restored: Load vehicle filter icons
-            await this.loadVehicles();
+            this.loadVehicleTypes(); // Load vehicle filter icons
+            this.loadVehicles();
             this.setupRealtimeListeners();
             this.loadAboutContent(); // Load about content on page load
-            console.log('NEXŞE initialized');
+            
+            // Initialize movement simulation (enabled by default)
+            this.movementSimulationEnabled = true;
+            
+            console.log('NEXŞE initialized successfully');
+            console.log('Real-time tracking: Movement simulation enabled');
+            console.log('Vehicle updates: Every 10 seconds');
+            console.log('Movement simulation: Every 15 seconds');
         } catch (error) {
             console.error('Error initializing:', error);
             this.showMessage('Error initializing NEXŞE', 'danger');
@@ -50,24 +57,36 @@ class IraqVehicleTracker {
     }
 
     initMap() {
-        this.map = L.map('map').setView(this.iraqCenter, 6);
-        
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors',
-            maxZoom: 19
-        }).addTo(this.map);
-        
-        this.markerCluster = L.markerClusterGroup({
-            chunkedLoading: true,
-            maxClusterRadius: 50
-        });
-        this.map.addLayer(this.markerCluster);
-        
-        // Add Iraq boundary
-        const iraqLayer = L.geoJSON(IRAQ_BOUNDARY, {
-            style: { color: '#e53935', weight: 2, opacity: 0.6, fillOpacity: 0.1 }
-        }).addTo(this.map);
-        this.map.fitBounds(iraqLayer.getBounds());
+        try {
+            console.log('Initializing map...');
+            this.map = L.map('map').setView(this.iraqCenter, 6);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19
+            }).addTo(this.map);
+            
+            this.markerCluster = L.markerClusterGroup({
+                chunkedLoading: true,
+                maxClusterRadius: 50
+            });
+            this.map.addLayer(this.markerCluster);
+            
+            // Add Iraq boundary
+            if (typeof IRAQ_BOUNDARY !== 'undefined') {
+                const iraqLayer = L.geoJSON(IRAQ_BOUNDARY, {
+                    style: { color: '#e53935', weight: 2, opacity: 0.6, fillOpacity: 0.1 }
+                }).addTo(this.map);
+                this.map.fitBounds(iraqLayer.getBounds());
+            } else {
+                console.warn('Iraq boundary data not loaded');
+            }
+            
+            console.log('Map initialized successfully');
+        } catch (error) {
+            console.error('Error initializing map:', error);
+            throw error;
+        }
     }
 
     setupEventListeners() {
@@ -103,11 +122,20 @@ class IraqVehicleTracker {
     }
 
     showSection(sectionName) {
+        console.log('Switching to section:', sectionName);
         document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
         document.getElementById(`${sectionName}-section`).classList.add('active');
         
-        if (sectionName === 'map') {
-            setTimeout(() => this.map.invalidateSize(), 100);
+        if (sectionName === 'map' && this.map) {
+            // Give the map container time to be visible before invalidating size
+            setTimeout(() => {
+                try {
+                    this.map.invalidateSize();
+                    console.log('Map size invalidated');
+                } catch (error) {
+                    console.error('Error invalidating map size:', error);
+                }
+            }, 200);
         }
     }
 
@@ -267,6 +295,16 @@ class IraqVehicleTracker {
     async registerDriver(driverData) {
         const drivers = JSON.parse(localStorage.getItem('drivers') || '[]');
         driverData.id = Date.now().toString();
+        
+        // Ensure the driver has a proper timestamp for location updates
+        if (driverData.location) {
+            driverData.location.timestamp = Date.now();
+        }
+        
+        // Set initial status for new drivers
+        driverData.lastSeen = Date.now();
+        driverData.online = false; // Start offline by default
+        
         drivers.push(driverData);
         localStorage.setItem('drivers', JSON.stringify(drivers));
         
@@ -295,6 +333,8 @@ class IraqVehicleTracker {
         } catch (error) {
             console.error('Error sending admin notification:', error);
         }
+        
+        console.log('New driver registered:', driverData.name, 'Location:', driverData.location);
     }
 
     async handleDriverLogin() {
@@ -431,7 +471,19 @@ class IraqVehicleTracker {
     async loadVehicles() {
         const drivers = JSON.parse(localStorage.getItem('drivers') || '[]');
         const approved = drivers.filter(d => d.approved);
+        const onlineApproved = approved.filter(d => d.online && d.location);
+        
+        console.log(`Loading vehicles: ${approved.length} approved, ${onlineApproved.length} online with location`);
+        
         this.displayVehiclesOnMap(approved);
+        
+        // Log current vehicle positions for debugging
+        if (onlineApproved.length > 0) {
+            console.log('Current online vehicle positions:');
+            onlineApproved.forEach(driver => {
+                console.log(`- ${driver.name} (${driver.vehicleType}): ${driver.location.lat.toFixed(4)}, ${driver.location.lng.toFixed(4)}`);
+            });
+        }
     }
 
     displayVehiclesOnMap(drivers) {
@@ -688,9 +740,19 @@ class IraqVehicleTracker {
         
         const pending = drivers.filter(d => !d.approved);
         const approved = drivers.filter(d => d.approved);
+        const online = drivers.filter(d => d.approved && d.online);
+        const withLocation = drivers.filter(d => d.location);
         
         console.log('Pending drivers:', pending.length, pending);
         console.log('Approved drivers:', approved.length, approved);
+        console.log('Online drivers:', online.length, online);
+        console.log('Drivers with location:', withLocation.length, withLocation);
+        
+        // Check movement simulation status
+        console.log('Movement simulation active for online drivers');
+        online.forEach(driver => {
+            console.log(`- ${driver.name} (${driver.vehicleType}): ${driver.location ? 'Has location' : 'No location'}`);
+        });
         
         // Check if table elements exist
         const pendingTable = document.getElementById('pending-drivers-tbody');
@@ -712,8 +774,74 @@ class IraqVehicleTracker {
 Total Drivers: ${drivers.length}
 Pending: ${pending.length}
 Approved: ${approved.length}
+Online: ${online.length}
+With Location: ${withLocation.length}
+
+Movement simulation is ${online.length > 0 ? 'ACTIVE' : 'INACTIVE'}
 
 Check console for detailed information.`);
+    }
+    
+    // Add function to force movement update for testing
+    forceMovementUpdate() {
+        console.log('Forcing movement update for all online drivers...');
+        this.simulateVehicleMovement();
+        this.showMessage('Movement update triggered! Check the map.', 'success');
+    }
+    
+    // Add function to enable/disable movement simulation
+    toggleMovementSimulation() {
+        if (this.movementSimulationEnabled === undefined) {
+            this.movementSimulationEnabled = true;
+        }
+        
+        this.movementSimulationEnabled = !this.movementSimulationEnabled;
+        
+        const message = this.movementSimulationEnabled ? 
+            'Movement simulation enabled' : 
+            'Movement simulation disabled';
+        this.showMessage(message, 'success');
+        console.log(message);
+    }
+    
+    // Add function to quickly enable some drivers for testing
+    enableTestDrivers() {
+        const drivers = JSON.parse(localStorage.getItem('drivers') || '[]');
+        let enabledCount = 0;
+        
+        drivers.forEach(driver => {
+            if (driver.approved && !driver.online && enabledCount < 5) {
+                driver.online = true;
+                driver.lastSeen = Date.now();
+                
+                // Ensure they have a location
+                if (!driver.location) {
+                    const iraqLocations = [
+                        { lat: 33.3152, lng: 44.3661 }, // Baghdad
+                        { lat: 36.1911, lng: 44.0094 }, // Erbil
+                        { lat: 35.5492, lng: 45.4394 }, // Sulaymaniyah
+                        { lat: 30.5085, lng: 47.7804 }, // Basra
+                    ];
+                    const randomLocation = iraqLocations[Math.floor(Math.random() * iraqLocations.length)];
+                    driver.location = {
+                        lat: randomLocation.lat + (Math.random() - 0.5) * 0.05,
+                        lng: randomLocation.lng + (Math.random() - 0.5) * 0.05,
+                        timestamp: Date.now()
+                    };
+                }
+                enabledCount++;
+            }
+        });
+        
+        if (enabledCount > 0) {
+            localStorage.setItem('drivers', JSON.stringify(drivers));
+            this.loadVehicles();
+            this.loadAdminData();
+            this.showMessage(`${enabledCount} drivers set online for testing`, 'success');
+            console.log(`Enabled ${enabledCount} test drivers for movement simulation`);
+        } else {
+            this.showMessage('No offline approved drivers available', 'warning');
+        }
     }
 
     // Content Management Methods
@@ -970,13 +1098,23 @@ Check console for detailed information.`);
                 driverData.id = Date.now().toString();
                 driverData.registeredAt = Date.now();
                 
-                // Set default location (Baghdad center) for new drivers
+                // Set realistic location within Iraq for movement simulation
+                const iraqLocations = [
+                    { lat: 33.3152, lng: 44.3661, city: 'Baghdad' },
+                    { lat: 36.1911, lng: 44.0094, city: 'Erbil' },
+                    { lat: 35.5492, lng: 45.4394, city: 'Sulaymaniyah' },
+                    { lat: 30.5085, lng: 47.7804, city: 'Basra' },
+                    { lat: 36.3350, lng: 43.1189, city: 'Mosul' }
+                ];
+                
+                const randomLocation = iraqLocations[Math.floor(Math.random() * iraqLocations.length)];
                 driverData.location = {
-                    lat: 33.3152,
-                    lng: 44.3661,
+                    lat: randomLocation.lat + (Math.random() - 0.5) * 0.05, // Small random offset
+                    lng: randomLocation.lng + (Math.random() - 0.5) * 0.05,
                     timestamp: Date.now()
                 };
                 driverData.country = 'IQ';
+                driverData.governorate = randomLocation.city;
                 
                 drivers.push(driverData);
                 localStorage.setItem('drivers', JSON.stringify(drivers));
@@ -992,11 +1130,13 @@ Check console for detailed information.`);
                 }
                 
                 this.showMessage('Driver added successfully!', 'success', 'driver-modal-message');
+                console.log('New driver added:', driverData.name, 'Location:', driverData.location);
             }
             
-            // Refresh admin data
+            // Refresh admin data and map
             setTimeout(() => {
                 this.loadAdminData();
+                this.loadVehicles(); // Refresh map to show new driver if online
                 this.closeDriverModal();
             }, 1500);
             
@@ -1217,6 +1357,19 @@ Check console for detailed information.`);
         const index = drivers.findIndex(d => d.id === driverId);
         if (index !== -1) {
             drivers[index].approved = true;
+            drivers[index].lastSeen = Date.now();
+            
+            // Ensure the driver has a valid location for movement simulation
+            if (!drivers[index].location || !drivers[index].location.timestamp) {
+                // Set a default location within Iraq if none exists
+                drivers[index].location = {
+                    lat: 33.3152 + (Math.random() - 0.5) * 0.1, // Random location near Baghdad
+                    lng: 44.3661 + (Math.random() - 0.5) * 0.1,
+                    timestamp: Date.now()
+                };
+                console.log('Set default location for approved driver:', drivers[index].name);
+            }
+            
             localStorage.setItem('drivers', JSON.stringify(drivers));
             
             // Send approval email to the driver
@@ -1236,6 +1389,7 @@ Check console for detailed information.`);
             }
             
             this.loadAdminData();
+            console.log('Driver approved:', drivers[index].name, 'Location:', drivers[index].location);
         }
     }
 
@@ -1378,7 +1532,7 @@ Check console for detailed information.`);
             if (this.currentDriver && this.currentDriver.online && this.autoLocationUpdate) {
                 this.updateLocationSilently();
             }
-        }, 120000); // Changed to 2 minutes
+        }, 120000); // 2 minutes
         
         // Update dashboard every 30 seconds if admin is logged in
         setInterval(() => {
@@ -1386,6 +1540,85 @@ Check console for detailed information.`);
                 this.updateDashboardStats();
             }
         }, 30000);
+        
+        // Demo vehicle movement simulation (for testing purposes)
+        this.startDemoMovement();
+    }
+    
+    startDemoMovement() {
+        // Simulate vehicle movement every 15 seconds for demo purposes
+        setInterval(() => {
+            this.simulateVehicleMovement();
+        }, 15000);
+    }
+    
+    simulateVehicleMovement() {
+        // Check if movement simulation is enabled (default: true)
+        if (this.movementSimulationEnabled === false) {
+            return;
+        }
+        
+        const drivers = JSON.parse(localStorage.getItem('drivers') || '[]');
+        let updated = false;
+        let movedCount = 0;
+        
+        drivers.forEach(driver => {
+            // Only simulate movement for approved online drivers
+            if (driver.approved && driver.online && driver.location) {
+                // Create realistic movement within Iraq boundaries
+                const newLocation = this.generateRealisticMovement(driver.location, driver.vehicleType);
+                
+                // Validate the new location is still within Iraq
+                if (isPointInIraq(newLocation.lat, newLocation.lng)) {
+                    const oldLat = driver.location.lat;
+                    const oldLng = driver.location.lng;
+                    
+                    driver.location = {
+                        lat: newLocation.lat,
+                        lng: newLocation.lng,
+                        timestamp: Date.now()
+                    };
+                    driver.lastSeen = Date.now();
+                    updated = true;
+                    movedCount++;
+                    
+                    // Log movement for debugging
+                    console.log(`Moved ${driver.name} (${driver.vehicleType}): ${oldLat.toFixed(4)},${oldLng.toFixed(4)} → ${newLocation.lat.toFixed(4)},${newLocation.lng.toFixed(4)}`);
+                }
+            }
+        });
+        
+        // Save updated positions
+        if (updated) {
+            localStorage.setItem('drivers', JSON.stringify(drivers));
+            // Refresh map to show new positions
+            this.loadVehicles();
+            console.log(`Movement simulation: ${movedCount} vehicles moved`);
+        } else {
+            console.log('Movement simulation: No vehicles to move (none online/approved)');
+        }
+    }
+    
+    generateRealisticMovement(currentLocation, vehicleType) {
+        // Different movement patterns for different vehicle types
+        const movementRanges = {
+            taxi: 0.005,        // ~500m movement
+            minibus: 0.003,     // ~300m movement  
+            'tuk-tuk': 0.002,   // ~200m movement
+            van: 0.004,         // ~400m movement
+            bus: 0.001          // ~100m movement (buses move slower)
+        };
+        
+        const range = movementRanges[vehicleType] || 0.003;
+        
+        // Generate random movement within realistic bounds
+        const latChange = (Math.random() - 0.5) * range;
+        const lngChange = (Math.random() - 0.5) * range;
+        
+        return {
+            lat: Math.max(29.0, Math.min(37.5, currentLocation.lat + latChange)),
+            lng: Math.max(38.7, Math.min(48.8, currentLocation.lng + lngChange))
+        };
     }
 
     // Dashboard Methods
