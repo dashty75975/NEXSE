@@ -10,10 +10,11 @@ class IraqVehicleTracker {
         this.markerCluster = null;
         this.currentDriver = null;
         this.currentAdmin = null;
-        this.activeFilters = new Set(['taxi', 'minibus', 'tuk-tuk', 'van', 'bus']); // Restored: Vehicle filtering
+        this.activeFilters = new Set(); // Will be populated by loadVehicleTypes
         this.iraqCenter = [33.3152, 44.3661];
         this.autoLocationUpdate = false; // New: Auto location update preference
         this.locationPermissionDenied = false; // Track permission status
+        this.locationWatchId = null; // Track real-time location updates
         
         // Initialize email service
         this.emailService = new EmailService();
@@ -115,10 +116,13 @@ class IraqVehicleTracker {
 
         // Removed: radius slider - no longer needed
 
-        // Online toggle
-        document.getElementById('online-toggle').addEventListener('change', (e) => {
-            this.toggleDriverOnlineStatus(e.target.checked);
-        });
+        // Online toggle (if exists - for compatibility)
+        const onlineToggle = document.getElementById('online-toggle');
+        if (onlineToggle) {
+            onlineToggle.addEventListener('change', (e) => {
+                this.toggleDriverOnlineStatus(e.target.checked);
+            });
+        }
     }
 
     showSection(sectionName) {
@@ -140,40 +144,36 @@ class IraqVehicleTracker {
     }
 
     async loadVehicleTypes() {
-        const vehicleTypes = [
-            { id: 'taxi', icon: '🚕', name: 'Taxi', enabled: true },
-            { id: 'minibus', icon: '🚐', name: 'Minibus', enabled: true },
-            { id: 'tuk-tuk', icon: '🛺', name: 'Tuk-tuk', enabled: true },
-            { id: 'van', icon: '🚐', name: 'Van', enabled: true },
-            { id: 'bus', icon: '🚌', name: 'Bus', enabled: true }
-        ];
+        const vehicleTypes = this.getVehicleTypes(); // Get from localStorage instead of hardcoded
         this.createVehicleFilters(vehicleTypes);
     }
 
     createVehicleFilters(vehicleTypes) {
-        const container = document.getElementById('vehicle-filters');
+        const container = document.getElementById('header-vehicle-filters');
         if (!container) return;
         
         container.innerHTML = '';
         
-        // Add "All" button (no text, just icon)
-        const allBtn = this.createFilterButton('all', '🚗', 'All Vehicles', true);
+        // Add "All" button with text
+        const allBtn = this.createHeaderFilterButton('all', 'ALL', 'All Vehicles', true);
         allBtn.classList.add('all-btn');
         container.appendChild(allBtn);
         
-        // Add vehicle type buttons (icons only)
-        vehicleTypes.forEach(type => {
-            if (type.enabled) {
-                const btn = this.createFilterButton(type.id, type.icon, type.name, true);
-                container.appendChild(btn);
-            }
+        // Add vehicle type buttons (icons only) - only for enabled types
+        vehicleTypes.filter(type => type.enabled).forEach(type => {
+            const btn = this.createHeaderFilterButton(type.id, type.icon, type.name, true);
+            container.appendChild(btn);
         });
+        
+        // Update active filters to only include enabled vehicle types
+        const enabledIds = vehicleTypes.filter(type => type.enabled).map(type => type.id);
+        this.activeFilters = new Set(enabledIds);
     }
 
-    createFilterButton(type, icon, name, active = false) {
+    createHeaderFilterButton(type, icon, name, active = false) {
         const button = document.createElement('button');
-        button.className = `filter-btn ${active ? 'active' : ''}`;
-        button.innerHTML = icon; // Only icon, no text!
+        button.className = `header-filter-btn ${active ? 'active' : ''}`;
+        button.innerHTML = icon; // Icon or text content
         button.title = name; // Tooltip shows the name
         button.onclick = () => this.toggleVehicleFilter(type, button);
         return button;
@@ -182,13 +182,15 @@ class IraqVehicleTracker {
     toggleVehicleFilter(type, button) {
         if (type === 'all') {
             const allActive = button.classList.contains('active');
-            document.querySelectorAll('.filter-btn').forEach(btn => {
+            document.querySelectorAll('.header-filter-btn').forEach(btn => {
                 btn.classList.toggle('active', !allActive);
             });
             if (allActive) {
                 this.activeFilters.clear();
             } else {
-                this.activeFilters = new Set(['taxi', 'minibus', 'tuk-tuk', 'van', 'bus']);
+                // Get enabled vehicle types dynamically
+                const enabledTypes = this.getVehicleTypes().filter(t => t.enabled).map(t => t.id);
+                this.activeFilters = new Set(enabledTypes);
             }
         } else {
             button.classList.toggle('active');
@@ -197,8 +199,22 @@ class IraqVehicleTracker {
             } else {
                 this.activeFilters.delete(type);
             }
+            
+            // Update "All" button state
+            const allBtn = document.querySelector('.header-filter-btn.all-btn');
+            if (allBtn) {
+                // Get current enabled types count dynamically
+                const enabledTypesCount = this.getVehicleTypes().filter(t => t.enabled).length;
+                allBtn.classList.toggle('active', this.activeFilters.size === enabledTypesCount);
+            }
         }
-        this.filterVehicles();
+        
+        this.applyVehicleFilters();
+    }
+
+    applyVehicleFilters() {
+        console.log('Applying vehicle filters:', Array.from(this.activeFilters));
+        this.loadVehicles(); // Reload vehicles with current filters
     }
 
     async handleRegistration() {
@@ -216,12 +232,12 @@ class IraqVehicleTracker {
             
             formData.location = location;
             formData.country = 'IQ';
-            formData.approved = false;
+            formData.approved = true; // Auto-approve new drivers
             formData.online = false;
             formData.registeredAt = Date.now();
             
             await this.registerDriver(formData);
-            this.showMessage('Registration submitted! Wait for approval.', 'success', 'registration-message');
+            this.showMessage('Registration successful! You can now login and start working.', 'success', 'registration-message');
             document.getElementById('registration-form').reset();
             
         } catch (error) {
@@ -305,8 +321,21 @@ class IraqVehicleTracker {
         driverData.lastSeen = Date.now();
         driverData.online = false; // Start offline by default
         
+        // Auto-approve all drivers EXCEPT taxis (taxis need admin approval)
+        if (driverData.vehicleType === 'taxi') {
+            driverData.approved = false; // Taxis need admin approval
+            console.log('Taxi driver registered - requires admin approval:', driverData.name);
+        } else {
+            driverData.approved = true; // All other vehicle types are auto-approved
+            console.log('Non-taxi driver auto-approved:', driverData.name, 'Vehicle type:', driverData.vehicleType);
+        }
+        
+        console.log('Registering new driver:', driverData.name, 'at location:', driverData.location);
+        
         drivers.push(driverData);
         localStorage.setItem('drivers', JSON.stringify(drivers));
+        
+        console.log('Total drivers after registration:', drivers.length);
         
         // Send welcome email to the new driver
         try {
@@ -335,6 +364,16 @@ class IraqVehicleTracker {
         }
         
         console.log('New driver registered:', driverData.name, 'Location:', driverData.location);
+        
+        // Show appropriate success message based on vehicle type
+        if (driverData.vehicleType === 'taxi') {
+            this.showMessage('Registration successful! Your taxi registration is pending admin approval. You will be notified once approved.', 'warning');
+        } else {
+            this.showMessage('Registration successful! You can now log in and go online to start receiving requests.', 'success');
+        }
+        
+        // Refresh the map immediately to show the new driver if they go online
+        this.loadVehicles();
     }
 
     async handleDriverLogin() {
@@ -350,13 +389,19 @@ class IraqVehicleTracker {
             const driver = await this.authenticateDriver(email, password);
             
             if (driver) {
+                // Check if driver is approved (taxis need approval, others are auto-approved)
                 if (!driver.approved) {
-                    this.showMessage('Account pending approval', 'warning', 'login-message');
+                    if (driver.vehicleType === 'taxi') {
+                        this.showMessage('Your taxi registration is pending admin approval. Please wait for approval.', 'warning', 'login-message');
+                    } else {
+                        this.showMessage('Your account is pending approval. Please contact admin.', 'warning', 'login-message');
+                    }
                     return;
                 }
                 
                 this.currentDriver = driver;
                 this.showDriverDashboard();
+                this.showMessage(`Welcome back, ${driver.name}! Use the big button to go online.`, 'success');
             } else {
                 this.showMessage('Invalid credentials', 'danger', 'login-message');
             }
@@ -373,6 +418,14 @@ class IraqVehicleTracker {
     showDriverDashboard() {
         document.getElementById('driver-login').style.display = 'none';
         document.getElementById('driver-dashboard').style.display = 'block';
+        
+        // Ensure big button is properly initialized
+        const bigBtn = document.getElementById('big-online-btn');
+        if (bigBtn) {
+            bigBtn.disabled = false;
+            console.log('Big button initialized and enabled');
+        }
+        
         this.updateDriverStatus();
         this.addLocationUpdateControls();
     }
@@ -400,6 +453,12 @@ class IraqVehicleTracker {
                     'Not set'}
             </div>
             <div class="form-group">
+                <div style="padding: 1rem; background: #f8f9fa; border-radius: 8px; border-left: 4px solid var(--primary-color);">
+                    <h4 style="margin: 0 0 0.5rem 0; color: var(--primary-color);">📍 Real-time Location Tracking</h4>
+                    <p style="margin: 0; color: #666; font-size: 0.9rem;">When you go online, automatic location tracking starts and continuously updates your position on the map for passengers to find you.</p>
+                </div>
+            </div>
+            <div class="form-group">
                 <label style="display: flex; align-items: center; gap: 0.5rem;">
                     <input type="checkbox" id="auto-location-toggle" ${this.autoLocationUpdate ? 'checked' : ''}>
                     <span>Auto-update location every 2 minutes</span>
@@ -424,28 +483,106 @@ class IraqVehicleTracker {
     updateDriverStatus() {
         const statusEl = document.getElementById('driver-status');
         const toggle = document.getElementById('online-toggle');
+        const bigBtn = document.getElementById('big-online-btn');
+        
+        console.log('Updating driver status UI:', {
+            driver: this.currentDriver?.name,
+            online: this.currentDriver?.online,
+            hasLocation: !!this.currentDriver?.location
+        });
         
         if (this.currentDriver.online) {
             statusEl.className = 'status-indicator status-online';
             statusEl.innerHTML = '<i class="fas fa-circle"></i><span>Online</span>';
-            toggle.checked = true;
+            if (toggle) toggle.checked = true;
+            
+            // Update big button for online state
+            if (bigBtn) {
+                bigBtn.className = 'big-status-btn online';
+                bigBtn.disabled = false;
+                bigBtn.innerHTML = `
+                    <div class="btn-icon">
+                        <i class="fas fa-pause"></i>
+                    </div>
+                    <div class="btn-content">
+                        <div class="btn-title">Go Offline</div>
+                        <div class="btn-subtitle">Stop receiving ride requests</div>
+                    </div>
+                `;
+            }
         } else {
             statusEl.className = 'status-indicator status-offline';
             statusEl.innerHTML = '<i class="fas fa-circle"></i><span>Offline</span>';
-            toggle.checked = false;
+            if (toggle) toggle.checked = false;
+            
+            // Update big button for offline state
+            if (bigBtn) {
+                bigBtn.className = 'big-status-btn offline';
+                bigBtn.disabled = false;
+                bigBtn.innerHTML = `
+                    <div class="btn-icon">
+                        <i class="fas fa-power-off"></i>
+                    </div>
+                    <div class="btn-content">
+                        <div class="btn-title">Go Online</div>
+                        <div class="btn-subtitle">Start receiving ride requests</div>
+                    </div>
+                `;
+            }
         }
+        
+        // Add debug info for troubleshooting
+        console.log('Driver status UI updated:', {
+            driverName: this.currentDriver?.name,
+            online: this.currentDriver?.online,
+            hasLocation: !!this.currentDriver?.location,
+            location: this.currentDriver?.location,
+            buttonEnabled: bigBtn ? !bigBtn.disabled : 'N/A'
+        });
     }
 
     async toggleDriverOnlineStatus(online) {
         try {
+            console.log('toggleDriverOnlineStatus called with:', online, typeof online);
+            
+            // Check if driver is approved before allowing online status
+            if (!this.currentDriver.approved) {
+                if (this.currentDriver.vehicleType === 'taxi') {
+                    this.showMessage('Your taxi registration is pending admin approval. You cannot go online until approved.', 'warning');
+                } else {
+                    this.showMessage('Your account is pending approval. Please contact admin.', 'warning');
+                }
+                
+                // Re-enable big button
+                const bigBtn = document.getElementById('big-online-btn');
+                if (bigBtn) {
+                    bigBtn.disabled = false;
+                    bigBtn.style.opacity = '1';
+                }
+                return;
+            }
+            
             if (online) {
                 const location = await this.getCurrentLocation();
                 if (!isPointInIraq(location.lat, location.lng)) {
                     this.showMessage('Must be in Iraq to go online', 'danger');
-                    document.getElementById('online-toggle').checked = false;
+                    const toggle = document.getElementById('online-toggle');
+                    if (toggle) toggle.checked = false;
+                    
+                    // Re-enable big button
+                    const bigBtn = document.getElementById('big-online-btn');
+                    if (bigBtn) {
+                        bigBtn.disabled = false;
+                        bigBtn.style.opacity = '1';
+                    }
                     return;
                 }
                 this.currentDriver.location = location;
+                // Start real-time location updates
+                this.startRealtimeLocationUpdates();
+            } else {
+                // Stop real-time location updates
+                this.stopRealtimeLocationUpdates();
             }
             
             this.currentDriver.online = online;
@@ -453,9 +590,31 @@ class IraqVehicleTracker {
             await this.updateDriverData(this.currentDriver);
             this.updateDriverStatus();
             
+            // Refresh the map to show/hide this driver
+            this.loadVehicles();
+            
+            const statusMsg = online ? 'You are now online and visible to passengers!' : 'You are now offline and hidden from passengers.';
+            this.showMessage(statusMsg, 'success');
+            
+            // Re-enable big button after successful operation
+            const bigBtn = document.getElementById('big-online-btn');
+            if (bigBtn) {
+                bigBtn.disabled = false;
+                bigBtn.style.opacity = '1';
+            }
+            
         } catch (error) {
+            console.error('Error in toggleDriverOnlineStatus:', error);
             this.showMessage('Failed to update status', 'danger');
-            document.getElementById('online-toggle').checked = !online;
+            const toggle = document.getElementById('online-toggle');
+            if (toggle) toggle.checked = !online;
+            
+            // Re-enable big button on error
+            const bigBtn = document.getElementById('big-online-btn');
+            if (bigBtn) {
+                bigBtn.disabled = false;
+                bigBtn.style.opacity = '1';
+            }
         }
     }
 
@@ -470,19 +629,24 @@ class IraqVehicleTracker {
 
     async loadVehicles() {
         const drivers = JSON.parse(localStorage.getItem('drivers') || '[]');
-        const approved = drivers.filter(d => d.approved);
-        const onlineApproved = approved.filter(d => d.online && d.location);
+        console.log('All drivers in database:', drivers.length);
         
-        console.log(`Loading vehicles: ${approved.length} approved, ${onlineApproved.length} online with location`);
+        // Show only APPROVED drivers (taxis need approval, others are auto-approved)
+        const approvedDrivers = drivers.filter(d => d.approved);
+        const onlineDrivers = approvedDrivers.filter(d => d.online && d.location);
         
-        this.displayVehiclesOnMap(approved);
+        console.log(`Loading vehicles: ${drivers.length} total drivers, ${approvedDrivers.length} approved, ${onlineDrivers.length} online with location`);
+        
+        this.displayVehiclesOnMap(approvedDrivers); // Show only approved drivers
         
         // Log current vehicle positions for debugging
-        if (onlineApproved.length > 0) {
+        if (onlineDrivers.length > 0) {
             console.log('Current online vehicle positions:');
-            onlineApproved.forEach(driver => {
+            onlineDrivers.forEach(driver => {
                 console.log(`- ${driver.name} (${driver.vehicleType}): ${driver.location.lat.toFixed(4)}, ${driver.location.lng.toFixed(4)}`);
             });
+        } else {
+            console.log('No online approved drivers found');
         }
     }
 
@@ -492,7 +656,10 @@ class IraqVehicleTracker {
         
         drivers.forEach(driver => {
             if (driver.location && driver.online) {
-                this.addVehicleMarker(driver);
+                // Apply vehicle type filter
+                if (this.activeFilters.size === 0 || this.activeFilters.has(driver.vehicleType)) {
+                    this.addVehicleMarker(driver);
+                }
             }
         });
     }
@@ -663,8 +830,9 @@ class IraqVehicleTracker {
         const drivers = JSON.parse(localStorage.getItem('drivers') || '[]');
         console.log('All drivers from localStorage:', drivers);
         
-        const pending = drivers.filter(d => !d.approved);
-        console.log('Pending drivers (not approved):', pending);
+        // Only taxi drivers need approval, others are auto-approved
+        const pending = drivers.filter(d => !d.approved && d.vehicleType === 'taxi');
+        console.log('Pending taxi drivers (not approved):', pending);
         
         this.populatePendingDriversTable(pending);
         this.populateAllDriversTable(drivers);
@@ -676,6 +844,12 @@ class IraqVehicleTracker {
         if (this.updateDashboardStats) {
             this.updateDashboardStats();
         }
+        
+        // Update movement status info
+        this.updateMovementStatusInfo();
+        
+        // Load vehicle types for management
+        this.loadVehicleTypesForManagement();
     }
     
     loadEmailConfiguration() {
@@ -798,10 +972,22 @@ Check console for detailed information.`);
         this.movementSimulationEnabled = !this.movementSimulationEnabled;
         
         const message = this.movementSimulationEnabled ? 
-            'Movement simulation enabled' : 
-            'Movement simulation disabled';
+            'Movement simulation ENABLED - Vehicles will move automatically every 15 seconds' : 
+            'Movement simulation DISABLED - Vehicles will only move when real drivers update location';
+        
+        // Update button text
+        const toggleBtn = document.querySelector('[onclick="app.toggleMovementSimulation()"]');
+        if (toggleBtn) {
+            toggleBtn.innerHTML = this.movementSimulationEnabled ?
+                '<i class="fas fa-pause"></i> Stop Simulation' :
+                '<i class="fas fa-play"></i> Start Simulation';
+        }
+        
         this.showMessage(message, 'success');
         console.log(message);
+        
+        // Update status info
+        this.updateMovementStatusInfo();
     }
     
     // Add function to quickly enable some drivers for testing
@@ -841,6 +1027,26 @@ Check console for detailed information.`);
             console.log(`Enabled ${enabledCount} test drivers for movement simulation`);
         } else {
             this.showMessage('No offline approved drivers available', 'warning');
+        }
+    }
+    
+    // Add function to update movement status info
+    updateMovementStatusInfo() {
+        const statusDiv = document.querySelector('.alert.alert-info');
+        if (statusDiv) {
+            const drivers = JSON.parse(localStorage.getItem('drivers') || '[]');
+            const onlineDrivers = drivers.filter(d => d.approved && d.online).length;
+            const simulationStatus = this.movementSimulationEnabled ? 'ACTIVE' : 'DISABLED';
+            
+            statusDiv.innerHTML = `
+                <i class="fas fa-info-circle"></i>
+                <strong>Real-time Tracking Status:</strong> Movement simulation is <strong>${simulationStatus}</strong>. 
+                ${onlineDrivers} drivers online. 
+                ${this.movementSimulationEnabled ? 
+                    'Vehicles move automatically every 15 seconds.' : 
+                    'Only real driver updates will move vehicles.'}
+                Use "Force Movement" to trigger immediate updates.
+            `;
         }
     }
 
@@ -1148,35 +1354,83 @@ Check console for detailed information.`);
 
     async toggleDriverOnlineStatus(driverId) {
         try {
+            console.log('Toggling driver online status for driver ID:', driverId);
+            
             const drivers = JSON.parse(localStorage.getItem('drivers') || '[]');
             const index = drivers.findIndex(d => d.id === driverId);
             
             if (index === -1) {
+                console.error('Driver not found with ID:', driverId);
                 this.showMessage('Driver not found', 'danger');
-                return;
+                return false;
             }
             
             const driver = drivers[index];
             const newStatus = !driver.online;
             
+            console.log('Driver found:', {
+                name: driver.name,
+                currentStatus: driver.online,
+                newStatus: newStatus
+            });
+            
             // Update driver status
             drivers[index].online = newStatus;
             drivers[index].lastSeen = Date.now();
             
+            // If going online, update location
+            if (newStatus) {
+                try {
+                    const location = await this.getCurrentLocation();
+                    drivers[index].location = location;
+                    console.log('Updated driver location:', location);
+                } catch (error) {
+                    console.warn('Could not update location:', error);
+                    // Continue anyway - driver can still go online without location
+                }
+            }
+            
             localStorage.setItem('drivers', JSON.stringify(drivers));
+            
+            // Update current driver if it's the same one
+            if (this.currentDriver && this.currentDriver.id === driverId) {
+                this.currentDriver.online = newStatus;
+                this.currentDriver.lastSeen = Date.now();
+                if (newStatus && drivers[index].location) {
+                    this.currentDriver.location = drivers[index].location;
+                }
+            }
+            
+            // Update UI
+            this.updateDriverDashboard();
             
             // Refresh the vehicles on map
             this.loadVehicles();
             this.loadAdminData();
             
+            const statusText = newStatus ? 'online' : 'offline';
             this.showMessage(
-                `Driver ${driver.name} is now ${newStatus ? 'online' : 'offline'}`, 
+                `Driver ${driver.name} is now ${statusText}`, 
                 'success'
             );
+            
+            console.log('Driver status updated successfully:', {
+                driverName: driver.name,
+                newStatus: newStatus
+            });
+            
+            return true;
             
         } catch (error) {
             console.error('Error toggling driver status:', error);
             this.showMessage('Error updating driver status', 'danger');
+            return false;
+        }
+    }
+
+    updateDriverDashboard() {
+        if (this.currentDriver) {
+            this.updateDriverStatus();
         }
     }
 
@@ -1194,7 +1448,8 @@ Check console for detailed information.`);
             const row = tbody.insertRow();
             row.innerHTML = `
                 <td colspan="8" style="text-align: center; color: #666; padding: 2rem;">
-                    <i class="fas fa-info-circle"></i> No pending driver approvals
+                    <i class="fas fa-info-circle"></i> No pending taxi driver approvals
+                    <br><small>Note: Only taxi drivers require admin approval. Other vehicle types are auto-approved.</small>
                 </td>
             `;
             return;
@@ -1481,6 +1736,9 @@ Check console for detailed information.`);
     }
 
     logoutDriver() {
+        // Stop real-time location tracking if active
+        this.stopRealtimeLocationUpdates();
+        
         this.currentDriver = null;
         document.getElementById('driver-login').style.display = 'block';
         document.getElementById('driver-dashboard').style.display = 'none';
@@ -1527,13 +1785,6 @@ Check console for detailed information.`);
         // Refresh vehicles every 10 seconds
         setInterval(() => this.loadVehicles(), 10000);
         
-        // Update driver location every 2 minutes if online and auto-update enabled
-        setInterval(() => {
-            if (this.currentDriver && this.currentDriver.online && this.autoLocationUpdate) {
-                this.updateLocationSilently();
-            }
-        }, 120000); // 2 minutes
-        
         // Update dashboard every 30 seconds if admin is logged in
         setInterval(() => {
             if (this.currentAdmin) {
@@ -1543,6 +1794,114 @@ Check console for detailed information.`);
         
         // Demo vehicle movement simulation (for testing purposes)
         this.startDemoMovement();
+    }
+
+    // Real-time location tracking functions
+    startRealtimeLocationUpdates() {
+        console.log('Starting real-time location updates...');
+        
+        if (this.locationWatchId) {
+            this.stopRealtimeLocationUpdates();
+        }
+        
+        if (navigator.geolocation) {
+            this.locationWatchId = navigator.geolocation.watchPosition(
+                position => {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    
+                    console.log('Real-time location update:', { lat, lng });
+                    
+                    // Validate location is within Iraq
+                    if (isPointInIraq(lat, lng)) {
+                        this.updateDriverLocationInDatabase(lat, lng);
+                    } else {
+                        console.warn('Driver moved outside Iraq boundaries, going offline');
+                        this.goOfflineOutsideIraq();
+                    }
+                },
+                error => {
+                    console.error('Real-time location error:', error);
+                    if (error.code === error.PERMISSION_DENIED) {
+                        this.showMessage('Location permission denied. Going offline.', 'warning');
+                        this.goOfflineLocationError();
+                    }
+                },
+                {
+                    enableHighAccuracy: true,
+                    maximumAge: 30000, // 30 seconds
+                    timeout: 15000      // 15 seconds
+                }
+            );
+            
+            this.showMessage('Real-time location tracking started', 'success');
+        } else {
+            this.showMessage('Geolocation not supported', 'danger');
+        }
+    }
+    
+    stopRealtimeLocationUpdates() {
+        if (this.locationWatchId) {
+            console.log('Stopping real-time location updates...');
+            navigator.geolocation.clearWatch(this.locationWatchId);
+            this.locationWatchId = null;
+            this.showMessage('Real-time location tracking stopped', 'info');
+        }
+    }
+    
+    async updateDriverLocationInDatabase(lat, lng) {
+        try {
+            if (this.currentDriver) {
+                const location = {
+                    lat: lat,
+                    lng: lng,
+                    timestamp: Date.now()
+                };
+                
+                this.currentDriver.location = location;
+                this.currentDriver.lastSeen = Date.now();
+                
+                await this.updateDriverData(this.currentDriver);
+                
+                // Update the map to show new position
+                this.loadVehicles();
+                
+                console.log('Driver location updated in database:', location);
+            }
+        } catch (error) {
+            console.error('Error updating driver location:', error);
+        }
+    }
+    
+    async goOfflineOutsideIraq() {
+        try {
+            this.currentDriver.online = false;
+            this.currentDriver.lastSeen = Date.now();
+            
+            await this.updateDriverData(this.currentDriver);
+            this.updateDriverStatus();
+            this.stopRealtimeLocationUpdates();
+            
+            document.getElementById('online-toggle').checked = false;
+            this.showMessage('Automatically went offline: Outside Iraq boundaries', 'warning');
+        } catch (error) {
+            console.error('Error going offline:', error);
+        }
+    }
+    
+    async goOfflineLocationError() {
+        try {
+            this.currentDriver.online = false;
+            this.currentDriver.lastSeen = Date.now();
+            
+            await this.updateDriverData(this.currentDriver);
+            this.updateDriverStatus();
+            this.stopRealtimeLocationUpdates();
+            
+            document.getElementById('online-toggle').checked = false;
+        } catch (error) {
+            console.error('Error going offline:', error);
+        }
     }
     
     startDemoMovement() {
@@ -1563,7 +1922,7 @@ Check console for detailed information.`);
         let movedCount = 0;
         
         drivers.forEach(driver => {
-            // Only simulate movement for approved online drivers
+            // Only simulate movement for APPROVED online drivers
             if (driver.approved && driver.online && driver.location) {
                 // Create realistic movement within Iraq boundaries
                 const newLocation = this.generateRealisticMovement(driver.location, driver.vehicleType);
@@ -1633,10 +1992,10 @@ Check console for detailed information.`);
     updateDashboardStats() {
         const drivers = JSON.parse(localStorage.getItem('drivers') || '[]');
         
-        // Update statistics
+        // Update statistics - only taxi drivers need approval
         this.dashboardStats.totalDrivers = drivers.length;
         this.dashboardStats.onlineDrivers = drivers.filter(d => d.online && d.approved).length;
-        this.dashboardStats.pendingApprovals = drivers.filter(d => !d.approved).length;
+        this.dashboardStats.pendingApprovals = drivers.filter(d => !d.approved && d.vehicleType === 'taxi').length;
         
         // Update DOM elements
         document.getElementById('total-drivers').textContent = this.dashboardStats.totalDrivers;
@@ -1899,6 +2258,265 @@ Check console for detailed information.`);
             setTimeout(() => this.createActivityChart(), 100);
         }
     }
+    
+    // Vehicle Type Management Functions
+    loadVehicleTypesForManagement() {
+        const vehicleTypes = this.getVehicleTypes();
+        this.populateVehicleTypesTable(vehicleTypes);
+    }
+    
+    getVehicleTypes() {
+        const stored = localStorage.getItem('vehicleTypes');
+        if (stored) {
+            return JSON.parse(stored);
+        }
+        
+        // Return default vehicle types
+        const defaultTypes = [
+            { id: 'taxi', name: 'Taxi', icon: '🚕', color: '#FFD700', enabled: true },
+            { id: 'minibus', name: 'Minibus', icon: '🚐', color: '#4CAF50', enabled: true },
+            { id: 'tuk-tuk', name: 'Tuk-tuk', icon: '🛽', color: '#FF9800', enabled: true },
+            { id: 'van', name: 'Van', icon: '🚐', color: '#2196F3', enabled: true },
+            { id: 'bus', name: 'Bus', icon: '🚌', color: '#F44336', enabled: true }
+        ];
+        
+        this.saveVehicleTypes(defaultTypes);
+        return defaultTypes;
+    }
+    
+    saveVehicleTypes(vehicleTypes) {
+        localStorage.setItem('vehicleTypes', JSON.stringify(vehicleTypes));
+        // Refresh the vehicle filters on the map
+        this.loadVehicleTypes();
+        // Update any dropdowns that use vehicle types
+        this.updateVehicleTypeDropdowns(vehicleTypes);
+    }
+    
+    populateVehicleTypesTable(vehicleTypes) {
+        const tbody = document.getElementById('vehicle-types-tbody');
+        if (!tbody) return;
+        
+        tbody.innerHTML = '';
+        
+        vehicleTypes.forEach(type => {
+            const row = tbody.insertRow();
+            row.innerHTML = `
+                <td style="font-size: 1.5rem; text-align: center;">${type.icon}</td>
+                <td><code>${type.id}</code></td>
+                <td>${type.name}</td>
+                <td>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <div style="width: 20px; height: 20px; background: ${type.color}; border-radius: 3px;"></div>
+                        <span>${type.color}</span>
+                    </div>
+                </td>
+                <td>
+                    <span class="badge badge-${type.enabled ? 'success' : 'secondary'}">
+                        ${type.enabled ? 'Enabled' : 'Disabled'}
+                    </span>
+                </td>
+                <td>
+                    <div style="display: flex; gap: 0.25rem;">
+                        <button class="btn btn-sm" style="background: var(--warning-color); color: white;" 
+                                onclick="app.editVehicleType('${type.id}')" title="Edit">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-${type.enabled ? 'warning' : 'success'}" 
+                                onclick="app.toggleVehicleType('${type.id}')" 
+                                title="${type.enabled ? 'Disable' : 'Enable'}">
+                            <i class="fas fa-${type.enabled ? 'pause' : 'play'}"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" 
+                                onclick="app.deleteVehicleType('${type.id}')" title="Delete">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            `;
+        });
+    }
+    
+    addVehicleType() {
+        const id = document.getElementById('new-vehicle-id').value.trim();
+        const name = document.getElementById('new-vehicle-name').value.trim();
+        const icon = document.getElementById('new-vehicle-icon').value.trim();
+        const color = document.getElementById('new-vehicle-color').value;
+        
+        // Validation
+        if (!id || !name || !icon) {
+            this.showMessage('Please fill all required fields', 'danger', 'vehicle-management-message');
+            return;
+        }
+        
+        if (!/^[a-z-]+$/.test(id)) {
+            this.showMessage('Vehicle ID must contain only lowercase letters and hyphens', 'danger', 'vehicle-management-message');
+            return;
+        }
+        
+        const vehicleTypes = this.getVehicleTypes();
+        
+        // Check if ID already exists
+        if (vehicleTypes.find(type => type.id === id)) {
+            this.showMessage('Vehicle ID already exists', 'danger', 'vehicle-management-message');
+            return;
+        }
+        
+        // Add new vehicle type
+        const newType = {
+            id: id,
+            name: name,
+            icon: icon,
+            color: color,
+            enabled: true
+        };
+        
+        vehicleTypes.push(newType);
+        this.saveVehicleTypes(vehicleTypes);
+        this.populateVehicleTypesTable(vehicleTypes);
+        
+        // Clear form
+        document.getElementById('new-vehicle-id').value = '';
+        document.getElementById('new-vehicle-name').value = '';
+        document.getElementById('new-vehicle-icon').value = '';
+        document.getElementById('new-vehicle-color').value = '#FF5722';
+        
+        this.showMessage(`Vehicle type "${name}" added successfully!`, 'success', 'vehicle-management-message');
+    }
+    
+    editVehicleType(id) {
+        const vehicleTypes = this.getVehicleTypes();
+        const type = vehicleTypes.find(t => t.id === id);
+        
+        if (!type) {
+            this.showMessage('Vehicle type not found', 'danger', 'vehicle-management-message');
+            return;
+        }
+        
+        const newName = prompt('Enter new name:', type.name);
+        if (newName === null) return; // User cancelled
+        
+        if (!newName.trim()) {
+            this.showMessage('Name cannot be empty', 'danger', 'vehicle-management-message');
+            return;
+        }
+        
+        const newIcon = prompt('Enter new icon:', type.icon);
+        if (newIcon === null) return; // User cancelled
+        
+        if (!newIcon.trim()) {
+            this.showMessage('Icon cannot be empty', 'danger', 'vehicle-management-message');
+            return;
+        }
+        
+        const newColor = prompt('Enter new color (hex):', type.color);
+        if (newColor === null) return; // User cancelled
+        
+        if (!newColor.trim() || !/^#[0-9A-Fa-f]{6}$/.test(newColor)) {
+            this.showMessage('Please enter a valid hex color (e.g., #FF5722)', 'danger', 'vehicle-management-message');
+            return;
+        }
+        
+        // Update the type
+        type.name = newName.trim();
+        type.icon = newIcon.trim();
+        type.color = newColor.trim();
+        
+        this.saveVehicleTypes(vehicleTypes);
+        this.populateVehicleTypesTable(vehicleTypes);
+        
+        this.showMessage(`Vehicle type "${type.name}" updated successfully!`, 'success', 'vehicle-management-message');
+    }
+    
+    toggleVehicleType(id) {
+        const vehicleTypes = this.getVehicleTypes();
+        const type = vehicleTypes.find(t => t.id === id);
+        
+        if (!type) {
+            this.showMessage('Vehicle type not found', 'danger', 'vehicle-management-message');
+            return;
+        }
+        
+        type.enabled = !type.enabled;
+        
+        this.saveVehicleTypes(vehicleTypes);
+        this.populateVehicleTypesTable(vehicleTypes);
+        
+        const status = type.enabled ? 'enabled' : 'disabled';
+        this.showMessage(`Vehicle type "${type.name}" ${status} successfully!`, 'success', 'vehicle-management-message');
+    }
+    
+    deleteVehicleType(id) {
+        const vehicleTypes = this.getVehicleTypes();
+        const type = vehicleTypes.find(t => t.id === id);
+        
+        if (!type) {
+            this.showMessage('Vehicle type not found', 'danger', 'vehicle-management-message');
+            return;
+        }
+        
+        // Check if any drivers are using this vehicle type
+        const drivers = JSON.parse(localStorage.getItem('drivers') || '[]');
+        const driversUsingType = drivers.filter(d => d.vehicleType === id);
+        
+        if (driversUsingType.length > 0) {
+            const confirmation = confirm(
+                `Warning: ${driversUsingType.length} driver(s) are currently using this vehicle type.\n\n` +
+                `Deleting this type will affect their profiles. Are you sure you want to continue?`
+            );
+            
+            if (!confirmation) return;
+        } else {
+            const confirmation = confirm(`Are you sure you want to delete the vehicle type "${type.name}"?`);
+            if (!confirmation) return;
+        }
+        
+        // Remove the vehicle type
+        const updatedTypes = vehicleTypes.filter(t => t.id !== id);
+        this.saveVehicleTypes(updatedTypes);
+        this.populateVehicleTypesTable(updatedTypes);
+        
+        this.showMessage(`Vehicle type "${type.name}" deleted successfully!`, 'success', 'vehicle-management-message');
+    }
+    
+    updateVehicleTypeDropdowns(vehicleTypes) {
+        // Update registration form dropdown
+        const registrationSelect = document.getElementById('vehicle-type');
+        if (registrationSelect) {
+            const currentValue = registrationSelect.value;
+            registrationSelect.innerHTML = '<option value="">Select Vehicle Type</option>';
+            
+            vehicleTypes.filter(type => type.enabled).forEach(type => {
+                const option = document.createElement('option');
+                option.value = type.id;
+                option.textContent = `${type.icon} ${type.name}`;
+                registrationSelect.appendChild(option);
+            });
+            
+            // Restore selected value if it still exists
+            if (vehicleTypes.find(t => t.id === currentValue && t.enabled)) {
+                registrationSelect.value = currentValue;
+            }
+        }
+        
+        // Update modal dropdown
+        const modalSelect = document.getElementById('modal-vehicle-type');
+        if (modalSelect) {
+            const currentValue = modalSelect.value;
+            modalSelect.innerHTML = '<option value="">Select Vehicle Type</option>';
+            
+            vehicleTypes.filter(type => type.enabled).forEach(type => {
+                const option = document.createElement('option');
+                option.value = type.id;
+                option.textContent = `${type.icon} ${type.name}`;
+                modalSelect.appendChild(option);
+            });
+            
+            // Restore selected value if it still exists
+            if (vehicleTypes.find(t => t.id === currentValue && t.enabled)) {
+                modalSelect.value = currentValue;
+            }
+        }
+    }
 }
 
 // Global functions for onclick handlers
@@ -1926,10 +2544,156 @@ function showDashboardTab(tabName) {
     app.showDashboardTab(tabName);
 }
 
+// Mobile menu functions
+function toggleMobileMenu() {
+    const menu = document.getElementById('mobile-menu');
+    const btn = document.getElementById('mobile-menu-btn');
+    const isVisible = menu.style.display === 'block';
+    
+    if (isVisible) {
+        menu.style.display = 'none';
+        btn.innerHTML = '<i class="fas fa-bars"></i>';
+    } else {
+        menu.style.display = 'block';
+        btn.innerHTML = '<i class="fas fa-times"></i>';
+    }
+}
+
+// Big online/offline button function
+function toggleBigOnlineButton() {
+    console.log('=== BIG BUTTON CLICKED ===');
+    console.log('Window.app exists:', !!window.app);
+    console.log('Current driver exists:', !!(window.app && window.app.currentDriver));
+    
+    if (!window.app) {
+        console.error('App not initialized');
+        alert('App is loading, please wait and try again.');
+        return;
+    }
+    
+    if (!window.app.currentDriver) {
+        console.error('No current driver logged in');
+        alert('Please log in as a driver first.');
+        return;
+    }
+    
+    const currentStatus = window.app.currentDriver.online;
+    const newStatus = !currentStatus;
+    
+    console.log('Toggling driver status:', {
+        driverName: window.app.currentDriver.name,
+        driverId: window.app.currentDriver.id,
+        fromStatus: currentStatus,
+        toStatus: newStatus,
+        hasLocation: !!window.app.currentDriver.location
+    });
+    
+    // Disable button temporarily to prevent double-clicks
+    const button = document.getElementById('big-online-btn');
+    if (button) {
+        console.log('Disabling button temporarily...');
+        button.disabled = true;
+        button.style.opacity = '0.6';
+        
+        // Re-enable after operation
+        setTimeout(() => {
+            if (button) {
+                button.disabled = false;
+                button.style.opacity = '1';
+                console.log('Button re-enabled');
+            }
+        }, 3000); // Give more time for the operation
+    } else {
+        console.error('Big button element not found!');
+    }
+    
+    try {
+        window.app.toggleDriverOnlineStatus(window.app.currentDriver.id);
+    } catch (error) {
+        console.error('Error calling toggleDriverOnlineStatus:', error);
+        // Re-enable button immediately on error
+        if (button) {
+            button.disabled = false;
+            button.style.opacity = '1';
+        }
+        alert('Error updating status. Please try again.');
+    }
+}
+
+// Debug function to check drivers
+function debugDrivers() {
+    const drivers = JSON.parse(localStorage.getItem('drivers') || '[]');
+    console.log('=== ALL DRIVERS DEBUG ===');
+    console.log('Total drivers:', drivers.length);
+    drivers.forEach((driver, index) => {
+        console.log(`${index + 1}. ${driver.name} - Online: ${driver.online} - Approved: ${driver.approved} - Location: ${driver.location ? 'Yes' : 'No'}`);
+    });
+    
+    if (window.app && window.app.currentDriver) {
+        console.log('Current logged in driver:', window.app.currentDriver.name);
+        console.log('Current driver online:', window.app.currentDriver.online);
+    }
+    
+    alert(`Found ${drivers.length} drivers. Check console for details.`);
+}
+
+// Debug function to check big button state
+function debugBigButton() {
+    console.log('=== BIG BUTTON DEBUG ===');
+    const button = document.getElementById('big-online-btn');
+    console.log('Button element exists:', !!button);
+    
+    if (button) {
+        console.log('Button details:', {
+            disabled: button.disabled,
+            className: button.className,
+            onclick: button.onclick ? 'Function assigned' : 'No onclick',
+            style: button.style.cssText,
+            innerHTML: button.innerHTML ? 'Has content' : 'No content'
+        });
+    }
+    
+    console.log('Window.app exists:', !!window.app);
+    console.log('Current driver exists:', !!(window.app && window.app.currentDriver));
+    
+    if (window.app && window.app.currentDriver) {
+        console.log('Current driver status:', {
+            name: window.app.currentDriver.name,
+            online: window.app.currentDriver.online,
+            location: window.app.currentDriver.location
+        });
+    }
+    
+    const dashboard = document.getElementById('driver-dashboard');
+    console.log('Driver dashboard visible:', dashboard ? dashboard.style.display !== 'none' : false);
+    
+    alert('Big button debug info logged to console');
+}
+
+function closeMobileMenu() {
+    const menu = document.getElementById('mobile-menu');
+    const btn = document.getElementById('mobile-menu-btn');
+    menu.style.display = 'none';
+    btn.innerHTML = '<i class="fas fa-bars"></i>';
+}
+
+// Close mobile menu when clicking outside
+document.addEventListener('click', function(event) {
+    const menu = document.getElementById('mobile-menu');
+    const btn = document.getElementById('mobile-menu-btn');
+    
+    if (menu && btn && menu.style.display === 'block') {
+        if (!menu.contains(event.target) && !btn.contains(event.target)) {
+            closeMobileMenu();
+        }
+    }
+});
+
 // Initialize NEXŞE when page loads
 let app;
 document.addEventListener('DOMContentLoaded', () => {
-    app = new IraqVehicleTracker();
+    window.app = new IraqVehicleTracker();
+    app = window.app; // Keep both for compatibility
 });
 
 // Export for module usage
