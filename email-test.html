@@ -78,3 +78,164 @@
     </script>
 </body>
 </html>
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Iraq Bus Tracker</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    html, body, #map { height: 100%; margin: 0; padding: 0; }
+    .control-panel {
+      position: absolute; top: 10px; left: 10px;
+      background: white; padding: 10px; border-radius: 6px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2); z-index: 1000;
+      font-family: sans-serif; width: 220px;
+    }
+    .control-panel input, .control-panel button {
+      width: 100%; margin: 4px 0; padding: 6px;
+    }
+  </style>
+</head>
+<body>
+<div id="map"></div>
+
+<div class="control-panel">
+  <h4>Register Vehicle</h4>
+  <input id="vehicleId" placeholder="Vehicle ID" />
+  <input id="vehiclePlate" placeholder="Plate Number" />
+  <button id="registerBtn">Register</button>
+  <button id="shareLocationBtn" disabled>Share Location</button>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  // Init map centered on Baghdad
+  const map = L.map('map').setView([33.3128, 44.3615], 6);
+
+  // OSM tiles
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(map);
+
+  // Bus icon
+  const busIcon = L.icon({
+    iconUrl: "https://cdn-icons-png.flaticon.com/512/61/61227.png",
+    iconSize: [32, 32],
+    iconAnchor: [16, 32]
+  });
+
+  const markers = {};
+  let driverToken = null;
+  let backendAvailable = false;
+
+  // -----------------------
+  // Try connecting to backend
+  // -----------------------
+  let socket = null;
+  try {
+    socket = io(); // requires /socket.io/socket.io.js
+    backendAvailable = true;
+    console.log("Backend connected");
+
+    socket.on("vehicle_list", vehicles => {
+      vehicles.forEach(updateVehicle);
+    });
+
+    socket.on("position_update", v => {
+      updateVehicle(v);
+    });
+  } catch (e) {
+    console.log("Backend not available, using demo mode");
+    backendAvailable = false;
+  }
+
+  // -----------------------
+  // Vehicle update function
+  // -----------------------
+  function updateVehicle(v) {
+    if (!v || !v.lat || !v.lng) return;
+    const latlng = [v.lat, v.lng];
+    const key = v.id || v.name;
+    if (markers[key]) {
+      markers[key].setLatLng(latlng);
+    } else {
+      markers[key] = L.marker(latlng, { icon: busIcon })
+        .addTo(map)
+        .bindPopup(`<b>${v.name || "Vehicle"}</b><br>${v.plate || ""}`);
+    }
+  }
+
+  // -----------------------
+  // Register vehicle (backend mode)
+  // -----------------------
+  document.getElementById("registerBtn").onclick = async () => {
+    if (!backendAvailable) return alert("Backend not running (demo mode only).");
+
+    const id = document.getElementById("vehicleId").value;
+    const plate = document.getElementById("vehiclePlate").value;
+    if (!id || !plate) return alert("Fill all fields!");
+
+    const res = await fetch("/api/vehicle/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, name: "Bus", plate })
+    });
+    const data = await res.json();
+    if (data.token) {
+      driverToken = data.token;
+      alert("Vehicle registered!");
+      document.getElementById("shareLocationBtn").disabled = false;
+    } else {
+      alert("Registration failed");
+    }
+  };
+
+  // Share live location (backend mode)
+  document.getElementById("shareLocationBtn").onclick = () => {
+    if (!navigator.geolocation) return alert("Geolocation not supported!");
+    navigator.geolocation.watchPosition(async pos => {
+      if (!driverToken) return;
+      await fetch("/api/vehicle/update", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + driverToken
+        },
+        body: JSON.stringify({
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude
+        })
+      });
+    });
+  };
+
+  // -----------------------
+  // DEMO MODE: Fake buses
+  // -----------------------
+  if (!backendAvailable) {
+    const vehicles = {
+      "bus1": { name: "Bus 1", plate: "IQ-123", lat: 33.3, lng: 44.36 },
+      "bus2": { name: "Bus 2", plate: "IQ-456", lat: 32.5, lng: 45.0 }
+    };
+
+    // Place initial buses
+    Object.values(vehicles).forEach(updateVehicle);
+
+    // Move buses randomly
+    setInterval(() => {
+      Object.values(vehicles).forEach(v => {
+        v.lat += (Math.random() - 0.5) * 0.05;
+        v.lng += (Math.random() - 0.5) * 0.05;
+        updateVehicle(v);
+      });
+    }, 3000);
+  }
+</script>
+
+<!-- Socket.IO (only loads if backend running) -->
+<script src="/socket.io/socket.io.js"></script>
+</body>
+</html>

@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEXŞE Movement Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 1rem;
+        }
+        .btn {
+            background: #1e88e5;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 0.5rem;
+            font-size: 1rem;
+        }
+        .btn:hover {
+            background: #1565c0;
+        }
+        .status {
+            margin: 1rem 0;
+            padding: 1rem;
+            border-radius: 6px;
+            font-weight: 500;
+        }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.warning { background: #fff3cd; color: #856404; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 1rem;
+            margin: 1rem 0;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+        .driver-list {
+            margin: 1rem 0;
+        }
+        .driver-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem;
+            margin: 0.25rem 0;
+            background: #f8f9fa;
+            border-radius: 4px;
+            border-left: 4px solid #28a745;
+        }
+    </style>
+</head>
+<body>
+    <h1>🚗 NEXŞE Real-time Movement Test</h1>
+    
+    <div class="test-container">
+        <h2>📊 System Status</h2>
+        <div id="status" class="status">Checking system status...</div>
+        
+        <button class="btn" onclick="checkStatus()">🔄 Refresh Status</button>
+        <button class="btn" onclick="createTestDrivers()">👥 Create Test Drivers</button>
+        <button class="btn" onclick="triggerMovement()">🚀 Force Movement</button>
+        <button class="btn" onclick="clearLogs()">🗑️ Clear Logs</button>
+    </div>
+    
+    <div class="test-container">
+        <h2>🚙 Current Drivers</h2>
+        <div id="driver-list" class="driver-list">Loading...</div>
+    </div>
+    
+    <div class="test-container">
+        <h2>📝 Movement Logs</h2>
+        <div id="logs" class="log">Starting movement test...\n</div>
+    </div>
+
+    <script src="iraq-boundary.js"></script>
+    <script>
+        let logCount = 0;
+        
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logElement = document.getElementById('logs');
+            logElement.innerHTML += `[${timestamp}] ${message}\n`;
+            logElement.scrollTop = logElement.scrollHeight;
+            logCount++;
+            
+            // Keep only last 50 log entries
+            if (logCount > 50) {
+                const lines = logElement.innerHTML.split('\n');
+                logElement.innerHTML = lines.slice(-50).join('\n');
+                logCount = 50;
+            }
+        }
+        
+        function updateStatus(message, type = 'success') {
+            const statusElement = document.getElementById('status');
+            statusElement.textContent = message;
+            statusElement.className = `status ${type}`;
+        }
+        
+        function checkStatus() {
+            log('🔍 Checking system status...');
+            
+            const drivers = JSON.parse(localStorage.getItem('drivers') || '[]');
+            const approved = drivers.filter(d => d.approved);
+            const online = approved.filter(d => d.online);
+            const withLocation = online.filter(d => d.location);
+            
+            updateStatus(`${drivers.length} total drivers, ${approved.length} approved, ${online.length} online, ${withLocation.length} ready for movement`);
+            
+            log(`📊 Status: ${drivers.length} total | ${approved.length} approved | ${online.length} online | ${withLocation.length} with location`);
+            
+            updateDriverList();
+            
+            if (withLocation.length === 0) {
+                updateStatus('⚠️ No drivers available for movement! Create test drivers first.', 'warning');
+            }
+        }
+        
+        function updateDriverList() {
+            const drivers = JSON.parse(localStorage.getItem('drivers') || '[]');
+            const driverListElement = document.getElementById('driver-list');
+            
+            if (drivers.length === 0) {
+                driverListElement.innerHTML = '<p>No drivers found. Click "Create Test Drivers" to add some.</p>';
+                return;
+            }
+            
+            driverListElement.innerHTML = drivers.map(driver => {
+                const status = driver.approved ? 
+                    (driver.online ? '🟢 Online' : '🔴 Offline') : 
+                    '🟡 Pending';
+                const location = driver.location ? 
+                    `${driver.location.lat.toFixed(4)}, ${driver.location.lng.toFixed(4)}` : 
+                    'No location';
+                    
+                return `
+                    <div class="driver-item">
+                        <span><strong>${driver.name}</strong> (${driver.vehicleType})</span>
+                        <span>${status} | ${location}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function createTestDrivers() {
+            log('👥 Creating test drivers...');
+            
+            const existingDrivers = JSON.parse(localStorage.getItem('drivers') || '[]');
+            if (existingDrivers.length > 0) {
+                log(`⚠️ Found ${existingDrivers.length} existing drivers. Clearing first.`);
+                localStorage.removeItem('drivers');
+            }
+            
+            const testDrivers = [
+                {
+                    id: Date.now().toString() + '1',
+                    name: 'Ahmed Test Driver',
+                    email: 'ahmed@test.com',
+                    phone: '+964 770 123 4567',
+                    licenseNumber: 'TEST001',
+                    plate: 'تست 1234',
+                    vehicleType: 'taxi',
+                    password: 'test123',
+                    approved: true,
+                    online: true,
+                    location: {
+                        lat: 33.3152 + (Math.random() - 0.5) * 0.1,
+                        lng: 44.3661 + (Math.random() - 0.5) * 0.1,
+                        timestamp: Date.now()
+                    },
+                    registeredAt: Date.now(),
+                    lastSeen: Date.now(),
+                    country: 'IQ'
+                },
+                {
+                    id: Date.now().toString() + '2',
+                    name: 'Fatima Test Driver',
+                    email: 'fatima@test.com',
+                    phone: '+964 771 234 5678',
+                    licenseNumber: 'TEST002',
+                    plate: 'تست 5678',
+                    vehicleType: 'minibus',
+                    routeFrom: 'Baghdad',
+                    routeTo: 'Basra',
+                    password: 'test123',
+                    approved: true,
+                    online: true,
+                    location: {
+                        lat: 30.5085 + (Math.random() - 0.5) * 0.1,
+                        lng: 47.7804 + (Math.random() - 0.5) * 0.1,
+                        timestamp: Date.now()
+                    },
+                    registeredAt: Date.now(),
+                    lastSeen: Date.now(),
+                    country: 'IQ'
+                },
+                {
+                    id: Date.now().toString() + '3',
+                    name: 'Omar Test Driver',
+                    email: 'omar@test.com',
+                    phone: '+964 772 345 6789',
+                    licenseNumber: 'TEST003',
+                    plate: 'تست 9876',
+                    vehicleType: 'van',
+                    password: 'test123',
+                    approved: true,
+                    online: true,
+                    location: {
+                        lat: 36.1911 + (Math.random() - 0.5) * 0.1,
+                        lng: 44.0094 + (Math.random() - 0.5) * 0.1,
+                        timestamp: Date.now()
+                    },
+                    registeredAt: Date.now(),
+                    lastSeen: Date.now(),
+                    country: 'IQ'
+                }
+            ];
+            
+            localStorage.setItem('drivers', JSON.stringify(testDrivers));
+            log(`✅ Created ${testDrivers.length} test drivers`);
+            
+            testDrivers.forEach(driver => {
+                log(`  • ${driver.name} (${driver.vehicleType}) at ${driver.location.lat.toFixed(4)}, ${driver.location.lng.toFixed(4)}`);
+            });
+            
+            updateStatus(`✅ Created ${testDrivers.length} test drivers and set them online`, 'success');
+            updateDriverList();
+        }
+        
+        function triggerMovement() {
+            log('🚀 Triggering movement simulation...');
+            
+            const drivers = JSON.parse(localStorage.getItem('drivers') || '[]');
+            const eligibleDrivers = drivers.filter(d => d.approved && d.online && d.location);
+            
+            if (eligibleDrivers.length === 0) {
+                log('❌ No eligible drivers for movement!');
+                updateStatus('No drivers available for movement', 'error');
+                return;
+            }
+            
+            log(`🎯 Found ${eligibleDrivers.length} eligible drivers`);
+            
+            // Simulate movement
+            let moved = 0;
+            drivers.forEach(driver => {
+                if (driver.approved && driver.online && driver.location) {
+                    const oldLat = driver.location.lat;
+                    const oldLng = driver.location.lng;
+                    
+                    // Generate new location
+                    const movementRanges = {
+                        taxi: 0.005,
+                        minibus: 0.003,
+                        'tuk-tuk': 0.002,
+                        van: 0.004,
+                        bus: 0.001
+                    };
+                    
+                    const range = movementRanges[driver.vehicleType] || 0.003;
+                    const latChange = (Math.random() - 0.5) * range;
+                    const lngChange = (Math.random() - 0.5) * range;
+                    
+                    const newLocation = {
+                        lat: driver.location.lat + latChange,
+                        lng: driver.location.lng + lngChange,
+                        timestamp: Date.now()
+                    };
+                    
+                    // Validate within Iraq
+                    if (isPointInIraq(newLocation.lat, newLocation.lng)) {
+                        driver.location = newLocation;
+                        driver.lastSeen = Date.now();
+                        moved++;
+                        
+                        log(`🚗 Moved ${driver.name}: ${oldLat.toFixed(4)},${oldLng.toFixed(4)} → ${newLocation.lat.toFixed(4)},${newLocation.lng.toFixed(4)}`);
+                    } else {
+                        log(`⚠️ ${driver.name} would move outside Iraq - movement rejected`);
+                    }
+                }
+            });
+            
+            if (moved > 0) {
+                localStorage.setItem('drivers', JSON.stringify(drivers));
+                log(`✅ Successfully moved ${moved} vehicles`);
+                updateStatus(`✅ Moved ${moved} vehicles successfully`, 'success');
+                updateDriverList();
+            } else {
+                log('❌ No vehicles moved');
+                updateStatus('No vehicles moved', 'warning');
+            }
+        }
+        
+        function clearLogs() {
+            document.getElementById('logs').innerHTML = 'Logs cleared.\n';
+            logCount = 0;
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            log('🎯 Movement test initialized');
+            checkStatus();
+            
+            // Auto-refresh status every 10 seconds
+            setInterval(checkStatus, 10000);
+            
+            log('📍 Iraq boundary validation is active');
+            log('🔄 Status will refresh every 10 seconds');
+            log('💡 Use buttons above to test movement simulation');
+        });
+    </script>
+</body>
+</html>

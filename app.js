@@ -37,6 +37,7 @@ class IraqVehicleTracker {
 
     async init() {
         try {
+            console.log('🚀 Initializing NEXŞE...');
             this.initMap();
             this.setupEventListeners();
             this.loadVehicleTypes(); // Load vehicle filter icons
@@ -46,13 +47,17 @@ class IraqVehicleTracker {
             
             // Initialize movement simulation (enabled by default)
             this.movementSimulationEnabled = true;
+            console.log('✅ Movement simulation initialized and ENABLED');
             
-            console.log('NEXŞE initialized successfully');
-            console.log('Real-time tracking: Movement simulation enabled');
-            console.log('Vehicle updates: Every 10 seconds');
-            console.log('Movement simulation: Every 15 seconds');
+            // Add some demo drivers if none exist (for testing)
+            this.ensureDemoDriversExist();
+            
+            console.log('✅ NEXŞE initialized successfully');
+            console.log('📊 Real-time tracking: Movement simulation enabled');
+            console.log('🔄 Vehicle updates: Every 10 seconds');
+            console.log('🚗 Movement simulation: Every 15 seconds');
         } catch (error) {
-            console.error('Error initializing:', error);
+            console.error('❌ Error initializing:', error);
             this.showMessage('Error initializing NEXŞE', 'danger');
         }
     }
@@ -958,9 +963,21 @@ Check console for detailed information.`);
     
     // Add function to force movement update for testing
     forceMovementUpdate() {
-        console.log('Forcing movement update for all online drivers...');
+        console.log('🚀 Forcing movement update for all online drivers...');
+        
+        const drivers = JSON.parse(localStorage.getItem('drivers') || '[]');
+        const eligibleDrivers = drivers.filter(d => d.approved && d.online && d.location);
+        
+        if (eligibleDrivers.length === 0) {
+            const message = 'No online approved drivers available for movement simulation';
+            console.warn('⚠️ ' + message);
+            this.showMessage(message, 'warning');
+            return;
+        }
+        
+        console.log(`🏁 Found ${eligibleDrivers.length} eligible drivers for movement`);
         this.simulateVehicleMovement();
-        this.showMessage('Movement update triggered! Check the map.', 'success');
+        this.showMessage(`Movement triggered for ${eligibleDrivers.length} vehicles! Check the map.`, 'success');
     }
     
     // Add function to enable/disable movement simulation
@@ -971,23 +988,32 @@ Check console for detailed information.`);
         
         this.movementSimulationEnabled = !this.movementSimulationEnabled;
         
+        const status = this.movementSimulationEnabled ? 'ENABLED' : 'DISABLED';
         const message = this.movementSimulationEnabled ? 
-            'Movement simulation ENABLED - Vehicles will move automatically every 15 seconds' : 
-            'Movement simulation DISABLED - Vehicles will only move when real drivers update location';
+            '✅ Movement simulation ENABLED - Vehicles will move automatically every 15 seconds' : 
+            '⛔ Movement simulation DISABLED - Vehicles will only move when real drivers update location';
         
         // Update button text
         const toggleBtn = document.querySelector('[onclick="app.toggleMovementSimulation()"]');
         if (toggleBtn) {
-            toggleBtn.innerHTML = this.movementSimulationEnabled ?
-                '<i class="fas fa-pause"></i> Stop Simulation' :
-                '<i class="fas fa-play"></i> Start Simulation';
+            const icon = this.movementSimulationEnabled ? 'pause' : 'play';
+            const text = this.movementSimulationEnabled ? 'Stop Simulation' : 'Start Simulation';
+            toggleBtn.innerHTML = `<i class="fas fa-${icon}"></i> ${text}`;
         }
         
         this.showMessage(message, 'success');
-        console.log(message);
+        console.log(`🔄 ${message}`);
         
         // Update status info
         this.updateMovementStatusInfo();
+        
+        // If enabling, force an immediate movement update to show it's working
+        if (this.movementSimulationEnabled) {
+            console.log('🟢 Running immediate movement test since simulation was just enabled...');
+            setTimeout(() => {
+                this.simulateVehicleMovement();
+            }, 1000);
+        }
     }
     
     // Add function to quickly enable some drivers for testing
@@ -1905,15 +1931,43 @@ Check console for detailed information.`);
     }
     
     startDemoMovement() {
+        console.log('🚀 Starting demo movement simulation...');
+        console.log('Movement will run every 15 seconds for approved online drivers');
+        
+        // Initial status log
+        this.logMovementStatus();
+        
         // Simulate vehicle movement every 15 seconds for demo purposes
         setInterval(() => {
             this.simulateVehicleMovement();
         }, 15000);
+        
+        // Log status every minute
+        setInterval(() => {
+            this.logMovementStatus();
+        }, 60000);
+    }
+    
+    logMovementStatus() {
+        const drivers = JSON.parse(localStorage.getItem('drivers') || '[]');
+        const approved = drivers.filter(d => d.approved);
+        const online = approved.filter(d => d.online);
+        const withLocation = online.filter(d => d.location);
+        
+        console.log(`📊 Movement Status: ${drivers.length} total, ${approved.length} approved, ${online.length} online, ${withLocation.length} with location`);
+        
+        if (withLocation.length > 0) {
+            console.log('🚗 Vehicles ready for movement:');
+            withLocation.forEach(driver => {
+                console.log(`  • ${driver.name} (${driver.vehicleType}) at ${driver.location.lat.toFixed(4)},${driver.location.lng.toFixed(4)}`);
+            });
+        }
     }
     
     simulateVehicleMovement() {
         // Check if movement simulation is enabled (default: true)
         if (this.movementSimulationEnabled === false) {
+            console.log('Movement simulation disabled - skipping');
             return;
         }
         
@@ -1921,9 +1975,13 @@ Check console for detailed information.`);
         let updated = false;
         let movedCount = 0;
         
+        console.log(`Starting movement simulation for ${drivers.length} total drivers`);
+        
         drivers.forEach(driver => {
             // Only simulate movement for APPROVED online drivers
             if (driver.approved && driver.online && driver.location) {
+                console.log(`Processing driver: ${driver.name} (${driver.vehicleType}) - Approved: ${driver.approved}, Online: ${driver.online}`);
+                
                 // Create realistic movement within Iraq boundaries
                 const newLocation = this.generateRealisticMovement(driver.location, driver.vehicleType);
                 
@@ -1942,8 +2000,12 @@ Check console for detailed information.`);
                     movedCount++;
                     
                     // Log movement for debugging
-                    console.log(`Moved ${driver.name} (${driver.vehicleType}): ${oldLat.toFixed(4)},${oldLng.toFixed(4)} → ${newLocation.lat.toFixed(4)},${newLocation.lng.toFixed(4)}`);
+                    console.log(`✅ Moved ${driver.name} (${driver.vehicleType}): ${oldLat.toFixed(4)},${oldLng.toFixed(4)} → ${newLocation.lat.toFixed(4)},${newLocation.lng.toFixed(4)}`);
+                } else {
+                    console.warn(`❌ New location for ${driver.name} is outside Iraq boundaries: ${newLocation.lat.toFixed(4)},${newLocation.lng.toFixed(4)}`);
                 }
+            } else {
+                console.log(`⏸️ Skipping driver ${driver.name}: Approved=${driver.approved}, Online=${driver.online}, HasLocation=${!!driver.location}`);
             }
         });
         
@@ -1952,9 +2014,9 @@ Check console for detailed information.`);
             localStorage.setItem('drivers', JSON.stringify(drivers));
             // Refresh map to show new positions
             this.loadVehicles();
-            console.log(`Movement simulation: ${movedCount} vehicles moved`);
+            console.log(`🚗 Movement simulation: ${movedCount} vehicles moved successfully`);
         } else {
-            console.log('Movement simulation: No vehicles to move (none online/approved)');
+            console.log('⚠️ Movement simulation: No vehicles to move (none online/approved)');
         }
     }
     
@@ -1974,10 +2036,18 @@ Check console for detailed information.`);
         const latChange = (Math.random() - 0.5) * range;
         const lngChange = (Math.random() - 0.5) * range;
         
-        return {
-            lat: Math.max(29.0, Math.min(37.5, currentLocation.lat + latChange)),
-            lng: Math.max(38.7, Math.min(48.8, currentLocation.lng + lngChange))
+        const newLocation = {
+            lat: currentLocation.lat + latChange,
+            lng: currentLocation.lng + lngChange
         };
+        
+        // Ensure the new location stays within Iraq's general bounds
+        newLocation.lat = Math.max(29.0, Math.min(37.5, newLocation.lat));
+        newLocation.lng = Math.max(38.7, Math.min(48.8, newLocation.lng));
+        
+        console.log(`📏 Generated movement for ${vehicleType}: ${currentLocation.lat.toFixed(4)},${currentLocation.lng.toFixed(4)} → ${newLocation.lat.toFixed(4)},${newLocation.lng.toFixed(4)} (range: ${range})`);
+        
+        return newLocation;
     }
 
     // Dashboard Methods
@@ -2515,6 +2585,87 @@ Check console for detailed information.`);
             if (vehicleTypes.find(t => t.id === currentValue && t.enabled)) {
                 modalSelect.value = currentValue;
             }
+        }
+    }
+    
+    // Add function to ensure demo drivers exist for testing
+    ensureDemoDriversExist() {
+        const drivers = JSON.parse(localStorage.getItem('drivers') || '[]');
+        
+        if (drivers.length === 0) {
+            console.log('🛠️ No drivers found, creating demo drivers for testing...');
+            
+            const demoDrivers = [
+                {
+                    id: Date.now().toString() + '1',
+                    name: 'Ahmed Al-Baghdadi',
+                    email: 'ahmed@demo.com',
+                    phone: '+964 770 123 4567',
+                    licenseNumber: 'BGD001',
+                    plate: 'بغداد 1234',
+                    vehicleType: 'taxi',
+                    password: 'demo123',
+                    approved: true,
+                    online: true,
+                    location: {
+                        lat: 33.3152 + (Math.random() - 0.5) * 0.1,
+                        lng: 44.3661 + (Math.random() - 0.5) * 0.1,
+                        timestamp: Date.now()
+                    },
+                    registeredAt: Date.now(),
+                    lastSeen: Date.now(),
+                    country: 'IQ'
+                },
+                {
+                    id: Date.now().toString() + '2',
+                    name: 'Fatima Al-Basri',
+                    email: 'fatima@demo.com',
+                    phone: '+964 771 234 5678',
+                    licenseNumber: 'BSR002',
+                    plate: 'البصرة 5678',
+                    vehicleType: 'minibus',
+                    routeFrom: 'Al-Basra',
+                    routeTo: 'Baghdad',
+                    password: 'demo123',
+                    approved: true,
+                    online: true,
+                    location: {
+                        lat: 30.5085 + (Math.random() - 0.5) * 0.1,
+                        lng: 47.7804 + (Math.random() - 0.5) * 0.1,
+                        timestamp: Date.now()
+                    },
+                    registeredAt: Date.now(),
+                    lastSeen: Date.now(),
+                    country: 'IQ'
+                },
+                {
+                    id: Date.now().toString() + '3',
+                    name: 'Omar Al-Kurdi',
+                    email: 'omar@demo.com',
+                    phone: '+964 772 345 6789',
+                    licenseNumber: 'ERB003',
+                    plate: 'أربيل 9876',
+                    vehicleType: 'van',
+                    password: 'demo123',
+                    approved: true,
+                    online: true,
+                    location: {
+                        lat: 36.1911 + (Math.random() - 0.5) * 0.1,
+                        lng: 44.0094 + (Math.random() - 0.5) * 0.1,
+                        timestamp: Date.now()
+                    },
+                    registeredAt: Date.now(),
+                    lastSeen: Date.now(),
+                    country: 'IQ'
+                }
+            ];
+            
+            localStorage.setItem('drivers', JSON.stringify(demoDrivers));
+            console.log(`✅ Created ${demoDrivers.length} demo drivers for testing`);
+            console.log('Demo drivers:', demoDrivers.map(d => `${d.name} (${d.vehicleType})`).join(', '));
+        } else {
+            const onlineDrivers = drivers.filter(d => d.approved && d.online).length;
+            console.log(`📊 Found ${drivers.length} existing drivers, ${onlineDrivers} online and approved`);
         }
     }
 }
